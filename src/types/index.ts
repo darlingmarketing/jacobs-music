@@ -5,17 +5,19 @@ export interface User {
   createdAt: string
 }
 
-export type BlockType = 'lyrics' | 'chords' | 'tab' | 'note'
+export type BlockType = 'lyrics' | 'chords' | 'tab' | 'note' | 'audio' | 'heading' | 'divider'
 
 export interface Block {
   id: string
   type: BlockType
   content: string
+  audioRecordingId?: string
   meta?: {
     alignment?: 'left' | 'center' | 'right'
     instrument?: 'guitar' | 'bass' | 'ukulele'
     repeatCount?: number
     loopRange?: { start: number; end: number }
+    headingLevel?: 1 | 2 | 3
   }
 }
 
@@ -113,4 +115,63 @@ export interface ParsedChord {
   quality?: string
   bass?: string
   isValid: boolean
+}
+
+export type StorageType = 'indexeddb' | 'remote' | 'none'
+
+export interface AudioRecording {
+  id: string
+  userId: string
+  title: string
+  notes?: string
+  tags: string[]
+  mimeType: string
+  durationMs: number
+  storageType: StorageType
+  storageRef?: string
+  blobData?: Blob
+  linkedSongId?: string
+  linkedSectionId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type SharePermission = 'view' | 'comment' | 'edit'
+
+export interface ShareToken {
+  id: string
+  songId: string
+  token: string
+  permission: SharePermission
+  createdBy: string
+  expiresAt?: string
+  createdAt: string
+}
+
+export interface Comment {
+  id: string
+  userId: string
+  userName: string
+  songId: string
+  sectionId?: string
+  blockId?: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SongVersion {
+  id: string
+  songId: string
+  snapshot: Song
+  author: string
+  createdAt: string
+}
+
+export interface SlashCommand {
+  id: string
+  label: string
+  icon: string
+  description: string
+  action: () => void
 }
