@@ -1,19 +1,19 @@
 export interface ChordSegment {
-  id: string
+  startMs: n
   startMs: number
   endMs: number
-  chord: string
-  confidence?: number
 }
+  confidence?: number
+ 
 
-export interface TranscriptionJob {
-  id: string
-  audioFileName?: string
-  audioDurationMs?: number
-  audioSampleRate?: number
-  status: 'idle' | 'processing' | 'success' | 'error' | 'cancelled'
-  progress: number
-  progressStep: string
+  segments: ChordSegment[]
+  createdAt:
+
+  frameSize: number
+  sampleRate: number
+  minSegmentDurationMs: number
+}
+export interface Worke
   segments: ChordSegment[]
   error?: string
   createdAt: string
@@ -30,8 +30,8 @@ export interface TranscriptionParams {
 
 export interface WorkerMessage {
   type: 'progress' | 'success' | 'error'
-  progress?: number
+
   step?: string
   segments?: ChordSegment[]
   error?: string
-}
+
