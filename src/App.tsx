@@ -7,7 +7,7 @@ import { Library } from '@/pages/Library'
 import { Discover } from '@/pages/Discover'
 import { Chords } from '@/pages/Chords'
 import { Tools } from '@/pages/Tools'
-import { SongEditor } from '@/pages/SongEditor'
+import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
 import { AudioIdeas } from '@/pages/AudioIdeas'
 import { Transcribe } from '@/pages/Transcribe'
 
