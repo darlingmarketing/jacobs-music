@@ -3,11 +3,12 @@ import { useKV } from '@github/spark/hooks'
 import type { Song, Section } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, FloppyDisk } from '@phosphor-icons/react'
+import { ArrowLeft, FloppyDisk, Play } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { SectionEditor } from '@/components/SectionEditor'
 import { MetadataPanel } from '@/components/MetadataPanel'
 import { TransposeControls } from '@/components/TransposeControls'
+import { PlayMode } from '@/components/PlayMode'
 import { useAutosave } from '@/hooks/useAutosave'
 
 interface SongEditorV2Props {
@@ -19,6 +20,7 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
   const [songs, setSongs] = useKV<Song[]>('songs', [])
   const [currentSong, setCurrentSong] = useState<Song | null>(null)
   const [transposeSteps, setTransposeSteps] = useState(0)
+  const [playModeOpen, setPlayModeOpen] = useState(false)
 
   useEffect(() => {
     if (songId) {
@@ -96,6 +98,10 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
 
   if (!currentSong) return <div className="p-6">Loading…</div>
 
+  if (playModeOpen) {
+    return <PlayMode song={currentSong} onExit={() => setPlayModeOpen(false)} />
+  }
+
   return (
     <div className="h-screen flex flex-col">
       {/* Top bar */}
@@ -105,10 +111,16 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
           Back
         </Button>
         <h1 className="font-bold text-lg truncate flex-1 text-center">{currentSong.title}</h1>
-        <Button onClick={saveSong} variant="outline" size="sm" className="gap-1 shrink-0">
-          <FloppyDisk size={16} />
-          Save
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button onClick={() => setPlayModeOpen(true)} variant="outline" size="sm" className="gap-1">
+            <Play size={16} />
+            Play
+          </Button>
+          <Button onClick={saveSong} variant="outline" size="sm" className="gap-1">
+            <FloppyDisk size={16} />
+            Save
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="editor" className="flex-1 flex flex-col overflow-hidden">
