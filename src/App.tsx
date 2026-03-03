@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench } from '@phosphor-icons/react'
+import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -8,8 +8,9 @@ import { Discover } from '@/pages/Discover'
 import { Chords } from '@/pages/Chords'
 import { Tools } from '@/pages/Tools'
 import { SongEditor } from '@/pages/SongEditor'
+import { AudioIdeas } from '@/pages/AudioIdeas'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'editor'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor'
 
 export interface AppState {
   currentPage: Page
@@ -37,6 +38,8 @@ function App() {
         return <Chords />
       case 'tools':
         return <Tools />
+      case 'audio':
+        return <AudioIdeas />
       case 'editor':
         return <SongEditor songId={state.editingSongId} onNavigate={navigateTo} />
       default:
@@ -47,8 +50,7 @@ function App() {
   const navItems = [
     { id: 'dashboard' as const, icon: House, label: 'Home' },
     { id: 'songs' as const, icon: MusicNotes, label: 'Songs' },
-    { id: 'library' as const, icon: BookBookmark, label: 'Library' },
-    { id: 'discover' as const, icon: MagnifyingGlass, label: 'Discover' },
+    { id: 'audio' as const, icon: Waveform, label: 'Audio' },
     { id: 'chords' as const, icon: Guitar, label: 'Chords' },
     { id: 'tools' as const, icon: Wrench, label: 'Tools' }
   ]
