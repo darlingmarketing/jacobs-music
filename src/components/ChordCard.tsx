@@ -8,9 +8,10 @@ import { audioEngine } from '@/lib/audioSynthesis'
 
 interface ChordCardProps {
   chord: Chord
+  leftHanded?: boolean
 }
 
-export function ChordCard({ chord }: ChordCardProps) {
+export function ChordCard({ chord, leftHanded = false }: ChordCardProps) {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -27,7 +28,7 @@ export function ChordCard({ chord }: ChordCardProps) {
         <div className="flex gap-4 pb-2">
           {chord.voicings.map(voicing => (
             <div key={voicing.id} className="flex flex-col items-center gap-2 flex-shrink-0">
-              <FretboardDiagram voicing={voicing} />
+              <FretboardDiagram voicing={voicing} leftHanded={leftHanded} />
               <div className="flex items-center gap-1 flex-wrap justify-center">
                 {voicing.tags?.map(t => (
                   <Badge key={t} variant="outline" className="text-xs capitalize">

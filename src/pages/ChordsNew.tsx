@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useKV } from '@github/spark/hooks'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ChordCard } from '@/components/ChordCard'
@@ -16,6 +17,7 @@ const CHORD_TYPES = [
 export function ChordsNew() {
   const [query, setQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [leftHanded] = useKV<boolean>('leftHandedMode', false)
 
   const filtered = CHORD_DATABASE.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -63,7 +65,7 @@ export function ChordsNew() {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(chord => (
-            <ChordCard key={chord.id} chord={chord} />
+            <ChordCard key={chord.id} chord={chord} leftHanded={leftHanded} />
           ))}
         </div>
       ) : (
