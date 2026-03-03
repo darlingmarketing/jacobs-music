@@ -4,83 +4,83 @@
 This document outlines key improvements to enhance the app's intelligence, capabilities, and user experience based on analysis of the current codebase.
 
 ## Current State Analysis
-The app currently has:
+- ✅ Song creation and 
 - ✅ Multi-model AI chord detection with Essentia.js
 - ✅ Audio recording and management
 - ✅ Song creation and editing
-- ✅ Chord timeline visualization
-- ✅ Model comparison views
-- ✅ Basic transcription utilities
-
-## Proposed Improvements
-
-### 1. Smart Song Analysis & Insights
-**Intelligence Enhancement**: Add LLM-powered song analysis to provide musical insights
-
-**Features**:
-- Chord progression analysis (identify common patterns like I-IV-V, ii-V-I)
-- Key detection and validation
-- Suggest similar songs based on chord patterns
-- Identify song structure (verse, chorus, bridge detection)
+- Chord progression analysis (id
+- Suggest similar songs ba
 - Harmonic complexity scoring
-- Suggest alternate chord voicings for variety
 
-**Implementation**: Use `spark.llm()` to analyze chord progressions and provide insights
 
-### 2. Intelligent Chord Suggestions
-**Intelligence Enhancement**: Context-aware chord recommendations
 
 **Features**:
-- Next chord prediction based on common progressions
 - Substitute chord suggestions (e.g., vi instead of I, II7 instead of V)
-- Modal interchange suggestions
-- Nashville number system conversion
-- Voice leading optimization suggestions
-
-**Implementation**: Combine pattern recognition with LLM for creative suggestions
-
-### 3. Practice Mode Intelligence
-**Intelligence Enhancement**: AI-powered practice assistant
 
 **Features**:
-- Difficulty assessment for songs
+
+**Intelligence Enhancement**: 
+**Features**:
 - Generate practice routines based on song complexity
-- Suggest simplified versions for beginners
-- Track chord transition patterns that need work
-- Personalized practice recommendations based on user's library
+- Track chord transition patt
 
-**Implementation**: Analyze user's song library to create personalized practice plans
 
-### 4. Smart Setlist Generator
 **Intelligence Enhancement**: Intelligent setlist creation
 
-**Features**:
-- Auto-generate setlists by key compatibility
-- Balance energy levels throughout performance
-- Suggest transitions between songs
+- Balance energy levels throughout p
 - Calculate total performance time
-- Optimize for capo changes
-- Tag songs by mood/energy for better flow
 
-**Implementation**: LLM analyzes song metadata and creates optimal setlists
-
+**Implementat
 ### 5. Enhanced Audio Analysis
-**Intelligence Enhancement**: Multi-dimensional audio insights
 
-**Features**:
-- Tempo detection (auto-detect BPM from audio)
-- Beat tracking and downbeat detection
+- Tempo detection (auto-detect 
 - Rhythm pattern analysis
-- Identify time signature automatically
 - Dynamic range analysis
-- Suggest click track settings
 
-**Implementation**: Leverage Essentia.js advanced features + custom algorithms
 
-### 6. Collaborative Features
-**Intelligence Enhancement**: Song sharing and collaboration
 
 **Features**:
+- Song version history (track changes over time)
+
+
+
+**Intelligence Enhancement**: Natural language song s
+**Features**:
+- "Show me slow ballads with simple progressions
+- Search by chord progression pattern
+
+
+
+**Features**:
+- Practice time tracking
+
+- Suggest son
+**Implementation**: KV storage with analytics
+### 9. Music Theory Assistant
+
+- Explain chord functions in conte
+- Identify borrowed chords 
+- Interactive circle of fifths
+
+
+
+**Features**:
+- Export as MIDI for use in DAWs
+
+- Generate le
+**Implementation**: Format converters + audio 
+## Priority Implementation Roadmap
+### High Priority (Implem
+2. **Intelligent Chord Suggestions** - 
+4. **Smart Search & Disc
+### Medium Priority (Next Phas
+
+8. Music Theory Assistant
+
+10. Enhanced Export Options
+## Technical Requirements
+
+
 - Export songs as shareable links
 - Song version history (track changes over time)
 - Collaborative annotations
@@ -164,25 +164,25 @@ The app currently has:
 - None (all features can be built with existing stack)
 
 ### New Components Needed
-- SongAnalysisPanel
-- ChordSuggestionWidget
-- SmartSearchBar
-- SetlistGenerator
-- PracticeMode
-- PerformanceAnalytics
-- TheoryAssistant
 
-### Data Model Updates
+- ChordSuggestionWidget
+
+- SetlistGenerator
+
+- PerformanceAnalytics
+
+
+
 - Add `analysis` field to Song type
 - Add `practiceHistory` tracking
 - Add `performanceMetadata` to songs
-- Add `setlists` collection
+
 - Add user preferences and settings
 
 ## Success Metrics
 - Increased user engagement time
 - More songs created per user
-- Higher quality transcriptions
+
 - Faster song creation workflow
 - User retention improvement
 - Feature adoption rates
