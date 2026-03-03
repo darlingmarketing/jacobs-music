@@ -175,3 +175,45 @@ export interface SlashCommand {
   description: string
   action: () => void
 }
+
+export interface ChordProgression {
+  chords: string[]
+  romanNumerals?: string[]
+  pattern?: string
+  frequency: number
+}
+
+export interface SongAnalysis {
+  id: string
+  songId: string
+  analyzedAt: string
+  detectedKey?: string
+  keyConfidence?: number
+  commonProgressions: ChordProgression[]
+  harmonicComplexity: number
+  suggestedAlternateChords: { original: string; alternatives: string[] }[]
+  structureAnalysis: {
+    sections: { type: string; chordPattern: string }[]
+    repetitionScore: number
+  }
+  similarSongIds?: string[]
+  insights: string[]
+  practiceRecommendations: string[]
+}
+
+export interface PracticeSession {
+  id: string
+  songId: string
+  userId: string
+  startTime: string
+  endTime: string
+  durationMinutes: number
+  notes?: string
+}
+
+export interface ChordMastery {
+  chord: string
+  timesPlayed: number
+  lastPracticed: string
+  confidence: number
+}

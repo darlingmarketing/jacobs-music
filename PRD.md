@@ -19,6 +19,27 @@ This application requires sophisticated audio signal processing, multiple detect
 - **Progression**: Upload audio → Select detection mode → Models process in parallel → Results combined via weighted voting → Confidence scores displayed → User reviews timeline
 - **Success criteria**: Detection accuracy improved by 30%+ over single-model approach, with measurable confidence scores for each segment
 
+### AI Song Analysis & Insights
+- **Functionality**: Deep analysis of song chord progressions, structure, and harmonic content using LLM intelligence
+- **Purpose**: Provides musicians with professional-level insights about their songs and personalized practice recommendations
+- **Trigger**: User clicks "Analyze Song with AI" on any song
+- **Progression**: Select song → AI analyzes chord progressions → Detects key and complexity → Identifies patterns → Generates insights and practice tips → User reviews analysis
+- **Success criteria**: Users gain actionable insights they can apply to their practice and performance
+
+### Smart Search & Discovery
+- **Functionality**: Natural language search that understands musical queries like "slow songs in the key of G" or "easy fingerstyle songs"
+- **Purpose**: Makes finding the right song intuitive and fast, eliminating manual filtering
+- **Trigger**: User types natural language query in smart search bar
+- **Progression**: Enter query → AI parses intent → Filters songs by musical criteria → Results displayed with relevance → User selects song
+- **Success criteria**: 80%+ success rate in interpreting musical queries correctly
+
+### Intelligent Chord Suggestions
+- **Functionality**: Context-aware chord progression recommendations based on current chords and music theory
+- **Purpose**: Helps songwriters and arrangers explore chord options and learn common progressions
+- **Trigger**: User activates suggestion widget while editing chords
+- **Progression**: Edit chords → Request suggestions → AI analyzes progression → Suggests next chords → User inserts chosen chord
+- **Success criteria**: Suggestions align with common progressions and sound musically appropriate
+
 ### Model Comparison Interface
 - **Functionality**: Shows side-by-side results from different detection models with color-coded confidence levels
 - **Purpose**: Helps users understand model disagreements and choose the best result for their context
