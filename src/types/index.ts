@@ -5,39 +5,63 @@ export interface User {
   createdAt: string
 }
 
+export type BlockType = 'lyrics' | 'chords' | 'tab' | 'note'
+
+export interface Block {
+  id: string
+  type: BlockType
+  content: string
+  meta?: {
+    alignment?: 'left' | 'center' | 'right'
+    instrument?: 'guitar' | 'bass' | 'ukulele'
+    repeatCount?: number
+    loopRange?: { start: number; end: number }
+  }
+}
+
+export type SectionType = 'intro' | 'verse' | 'chorus' | 'bridge' | 'outro' | 'solo' | 'custom'
+
+export interface Section {
+  id: string
+  name: string
+  type: SectionType
+  order: number
+  blocks: Block[]
+}
+
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
 export interface Song {
   id: string
   userId: string
   title: string
+  description?: string
   artist?: string
   key?: string
+  tempo?: number
+  timeSignature?: string
   capo?: number
   tuning?: string
-  tempo?: number
+  difficulty?: Difficulty
   tags: string[]
-  sections: SongSection[]
+  sections: Section[]
   createdAt: string
   updatedAt: string
 }
 
-export interface SongSection {
+export interface ChordVoicing {
   id: string
-  type: 'intro' | 'verse' | 'chorus' | 'bridge' | 'outro' | 'custom'
-  name?: string
-  content: string
-}
-
-export interface Chord {
-  name: string
-  voicings: ChordVoicing[]
+  frets: (number | -1)[]
+  fingers?: (number | null)[]
+  baseFret: number
   tags?: string[]
 }
 
-export interface ChordVoicing {
+export interface Chord {
   id: string
-  frets: (number | 'x')[]
-  fingers?: (number | null)[]
-  baseFret?: number
+  name: string
+  voicings: ChordVoicing[]
+  tags?: string[]
 }
 
 export interface Favorite {
@@ -65,7 +89,13 @@ export interface ExternalSong {
   title: string
   artist?: string
   url: string
-  cachedMetadata?: Record<string, unknown>
+  cachedMetadata?: {
+    key?: string
+    tempo?: number
+    difficulty?: string
+    duration?: number
+  }
+  createdAt: string
   updatedAt: string
 }
 
@@ -74,4 +104,13 @@ export interface UserSettings {
   fontSize: number
   autoscrollSpeed: number
   metronomeVolume: number
+  darkMode: boolean
+}
+
+export interface ParsedChord {
+  original: string
+  root: string
+  quality?: string
+  bass?: string
+  isValid: boolean
 }
