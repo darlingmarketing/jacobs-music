@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform } from '@phosphor-icons/react'
+import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -9,8 +9,9 @@ import { Chords } from '@/pages/Chords'
 import { Tools } from '@/pages/Tools'
 import { SongEditor } from '@/pages/SongEditor'
 import { AudioIdeas } from '@/pages/AudioIdeas'
+import { Transcribe } from '@/pages/Transcribe'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe'
 
 export interface AppState {
   currentPage: Page
@@ -40,6 +41,8 @@ function App() {
         return <Tools />
       case 'audio':
         return <AudioIdeas />
+      case 'transcribe':
+        return <Transcribe onNavigate={navigateTo} />
       case 'editor':
         return <SongEditor songId={state.editingSongId} onNavigate={navigateTo} />
       default:
@@ -51,6 +54,7 @@ function App() {
     { id: 'dashboard' as const, icon: House, label: 'Home' },
     { id: 'songs' as const, icon: MusicNotes, label: 'Songs' },
     { id: 'audio' as const, icon: Waveform, label: 'Audio' },
+    { id: 'transcribe' as const, icon: WaveformSlash, label: 'Transcribe' },
     { id: 'chords' as const, icon: Guitar, label: 'Chords' },
     { id: 'tools' as const, icon: Wrench, label: 'Tools' }
   ]
