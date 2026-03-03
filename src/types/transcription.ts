@@ -1,22 +1,17 @@
 export interface ChordSegment {
-  startMs: n
+  id: string
   startMs: number
   endMs: number
-}
+  chord: string
   confidence?: number
- 
-
-  segments: ChordSegment[]
-  createdAt:
-
-  frameSize: number
-  sampleRate: number
-  minSegmentDurationMs: number
+  modelVotes?: ModelPrediction[]
 }
-export interface Worke
-  segments: ChordSegment[]
-  error?: string
-  createdAt: string
+
+export interface ModelPrediction {
+  chord: string
+  confidence: number
+  modelId: string
+  features?: Record<string, number>
 }
 
 export interface TranscriptionParams {
@@ -26,12 +21,14 @@ export interface TranscriptionParams {
   beatAware: boolean
   minSegmentDurationMs: number
   confidenceThreshold: number
+  detectionMode?: 'fast' | 'balanced' | 'accurate'
+  enableEnsemble?: boolean
 }
 
 export interface WorkerMessage {
   type: 'progress' | 'success' | 'error'
-
+  progress?: number
   step?: string
   segments?: ChordSegment[]
   error?: string
-
+}

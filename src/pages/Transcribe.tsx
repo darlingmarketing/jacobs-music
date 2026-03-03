@@ -10,14 +10,17 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { ChordTimelineEditor } from '@/components/ChordTimelineEditor'
+import { ModelComparisonView } from '@/components/ModelComparisonView'
 import { 
   Upload, 
   Microphone, 
   WaveformSlash,
   FloppyDisk,
   ArrowsCounterClockwise,
-  CheckCircle
+  Brain,
+  SplitVertical
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { convertSegmentsToSong, transposeSegments, quantizeSegmentBoundaries, simplifySegments, segmentsToBars } from '@/lib/transcriptionUtils'
@@ -47,6 +50,8 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   const [songKey, setSongKey] = useState('')
   const [songArtist, setSongArtist] = useState('')
   const [songDescription, setSongDescription] = useState('')
+  const [enableEnsemble, setEnableEnsemble] = useState(true)
+  const [showModelComparison, setShowModelComparison] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workerRef = useRef<Worker | null>(null)
@@ -126,7 +131,8 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
         sampleRate: rate,
         beatAware: false,
         minSegmentDurationMs: 200,
-        confidenceThreshold: 0.1
+        confidenceThreshold: 0.1,
+        enableEnsemble
       }
       
       if (!workerRef.current) {
@@ -215,11 +221,11 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   const previewChords = segments.length > 0 ? segmentsToBars(segments, bpm, timeSig) : ''
   
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Audio Transcription</h1>
-        <p className="text-muted-foreground mt-1">
-          Upload audio and automatically detect chords using AI
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-display">AI Chord Detection</h1>
+        <p className="text-lg text-muted-foreground">
+          Advanced chord recognition powered by ensemble machine learning models
         </p>
       </div>
       
@@ -278,7 +284,10 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       
       <Card className="p-6">
         <div className="space-y-4">
-          <h3 className="font-semibold">Analysis Settings</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold font-display">AI Detection Settings</h3>
+            <Brain size={18} className="text-primary" />
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -309,6 +318,20 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
             </div>
           </div>
           
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
+            <div className="space-y-1">
+              <Label htmlFor="ensemble-mode" className="font-medium">Ensemble AI Models</Label>
+              <p className="text-sm text-muted-foreground">
+                Combine 3 AI models for improved accuracy
+              </p>
+            </div>
+            <Switch
+              id="ensemble-mode"
+              checked={enableEnsemble}
+              onCheckedChange={setEnableEnsemble}
+            />
+          </div>
+          
           <Button
             onClick={handleAnalyze}
             disabled={!audioFile || isProcessing}
@@ -316,13 +339,13 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
             size="lg"
           >
             <WaveformSlash size={20} />
-            {isProcessing ? 'Analyzing...' : 'Analyze Chords'}
+            {isProcessing ? 'Analyzing with AI...' : 'Analyze Chords'}
           </Button>
           
           {isProcessing && (
             <div className="space-y-2">
-              <Progress value={progress} />
-              <p className="text-sm text-muted-foreground text-center">{progressStep}</p>
+              <Progress value={progress} className="h-2" />
+              <p className="text-sm text-muted-foreground text-center font-mono">{progressStep}</p>
             </div>
           )}
         </div>
@@ -333,8 +356,17 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           <Card className="p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Chord Timeline</h3>
+                <h3 className="font-semibold font-display">Chord Timeline</h3>
                 <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowModelComparison(!showModelComparison)}
+                    variant={showModelComparison ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <SplitVertical size={16} />
+                    {showModelComparison ? 'Hide' : 'Show'} Models
+                  </Button>
                   <Button onClick={() => handleTranspose(-1)} variant="outline" size="sm">-1</Button>
                   <Button onClick={() => handleTranspose(1)} variant="outline" size="sm">+1</Button>
                   <Button onClick={handleQuantize} variant="outline" size="sm">Quantize</Button>
@@ -342,18 +374,22 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                 </div>
               </div>
               
-              <ChordTimelineEditor
-                segments={segments}
-                audioUrl={audioUrl}
-                audioDurationMs={audioDuration}
-                onChange={setSegments}
-              />
+              {showModelComparison ? (
+                <ModelComparisonView segments={segments} />
+              ) : (
+                <ChordTimelineEditor
+                  segments={segments}
+                  audioUrl={audioUrl}
+                  audioDurationMs={audioDuration}
+                  onChange={setSegments}
+                />
+              )}
             </div>
           </Card>
           
           <Card className="p-6">
             <div className="space-y-4">
-              <h3 className="font-semibold">Preview as Song</h3>
+              <h3 className="font-semibold font-display">Preview as Song</h3>
               
               <div className="space-y-2">
                 <Label>Conversion Mode</Label>
