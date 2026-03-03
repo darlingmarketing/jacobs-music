@@ -18,6 +18,7 @@ import { transposeChord } from '@/lib/chordParser'
 import { cn } from '@/lib/utils'
 import { useAutoscroll } from '@/hooks/useAutoscroll'
 import { PracticeLoop } from '@/components/PracticeLoop'
+import { FavoriteButton } from '@/components/FavoriteButton'
 
 interface PlayModeProps {
   song: Song
@@ -151,6 +152,12 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
           <ArrowLeft size={18} />
           Exit
         </Button>
+
+        <FavoriteButton
+          refId={song.id}
+          type="song"
+          className="text-gray-300 hover:text-yellow-400"
+        />
 
         <div className="flex items-center gap-2">
           <Button
