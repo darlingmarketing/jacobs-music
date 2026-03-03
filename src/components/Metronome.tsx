@@ -23,6 +23,8 @@ export function Metronome({ tempo: initialTempo = 120, timeSignature = '4/4', vo
   const intervalRef = useRef<number | null>(null)
   const tapTimesRef = useRef<number[]>([])
 
+  const beatsPerMeasure = parseInt(timeSignature.split('/')[0] ?? '4', 10) || 4
+
 const TAP_TIMEOUT_MS = 3000
 
   const handleTempoChange = (value: number[]) => {

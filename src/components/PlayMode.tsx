@@ -10,11 +10,14 @@ import {
   CaretDown,
   ArrowsClockwise,
   ArrowsCounterClockwise,
+  TextAa,
+  Guitar,
 } from '@phosphor-icons/react'
 import type { Song, UserSettings } from '@/types'
 import { transposeChord } from '@/lib/chordParser'
 import { cn } from '@/lib/utils'
 import { useAutoscroll } from '@/hooks/useAutoscroll'
+import { PracticeLoop } from '@/components/PracticeLoop'
 
 interface PlayModeProps {
   song: Song
@@ -116,8 +119,14 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
   const [loop, setLoop] = useState(false)
   const [speed, setSpeed] = useState(settings?.autoscrollSpeed ?? 30)
   const [activeLine, setActiveLine] = useState<string | null>(null)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [showPracticeLoop, setShowPracticeLoop] = useState(false)
+  // Font size: use settings.fontSize if provided (min 12, max 24), default 16
+  const [fontSize, setFontSize] = useState<number>(settings?.fontSize ?? 16)
+  // Left-handed mode from settings
+  const leftHanded = settings?.leftHandedMode ?? false
 
-  const containerRef = useAutoscroll(playing, speed)
+  const containerRef = useAutoscroll(playing, speed, { pauseAtSections: true })
 
   const transposedKey = song.key ? transposeChord(song.key, semitones) : null
   const capoSuggestions = getCapoSuggestions(semitones, song.key)
@@ -129,7 +138,7 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
   const semitoneLabel = semitones > 0 ? `+${semitones}` : String(semitones)
 
   return (
-    <div className="fixed inset-0 bg-gray-950 text-gray-100 flex flex-col overflow-hidden dark">
+    <div className="fixed inset-0 z-50 bg-gray-950 text-gray-100 flex flex-col overflow-hidden dark">
       {/* Controls bar */}
       <div className="shrink-0 border-b border-gray-800 px-4 py-3 flex flex-wrap items-center gap-3 bg-gray-900">
         <Button
@@ -169,6 +178,17 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
             <ArrowsCounterClockwise size={16} />
             Loop
           </Button>
+
+          <Button
+            size="sm"
+            variant={showPracticeLoop ? 'secondary' : 'outline'}
+            onClick={() => setShowPracticeLoop(v => !v)}
+            className="gap-1 text-gray-300 border-gray-700"
+            aria-label="Toggle practice loop panel"
+          >
+            <Guitar size={16} />
+            Practice
+          </Button>
         </div>
 
         {/* Speed slider */}
@@ -184,6 +204,30 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
             aria-label="Autoscroll speed"
           />
           <span className="text-xs text-gray-400 tabular-nums w-6">{speed}</span>
+        </div>
+
+        {/* Font size controls */}
+        <div className="flex items-center gap-1">
+          <TextAa size={16} className="text-gray-400 shrink-0" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setFontSize(f => Math.max(12, f - 1))}
+            className="text-gray-400 px-1.5"
+            aria-label="Decrease font size"
+          >
+            −
+          </Button>
+          <span className="text-xs text-gray-400 tabular-nums w-5 text-center">{fontSize}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setFontSize(f => Math.min(24, f + 1))}
+            className="text-gray-400 px-1.5"
+            aria-label="Increase font size"
+          >
+            +
+          </Button>
         </div>
 
         {/* Transpose controls */}
@@ -257,10 +301,24 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
         )}
       </div>
 
+      {/* Practice Loop panel */}
+      {showPracticeLoop && (
+        <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 max-h-[50vh] overflow-y-auto">
+          <PracticeLoop
+            sections={song.sections}
+            tempo={song.tempo}
+            timeSignature={song.timeSignature}
+            activeSectionId={activeSectionId}
+            onSectionChange={id => setActiveSectionId(id)}
+          />
+        </div>
+      )}
+
       {/* Song content */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto px-4 py-6 md:px-10"
+        style={{ fontSize: `${fontSize}px` }}
       >
         <div className="max-w-2xl mx-auto space-y-8">
           {/* Song header */}
@@ -283,11 +341,30 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
             </div>
           </div>
 
-          {song.sections.map(section => (
-            <section key={section.id} className="space-y-4">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-primary/70 border-b border-gray-800 pb-1">
-                {section.name}
-              </h2>
+          {song.sections.map(section => {
+            const isSectionActive = activeSectionId === section.id
+            return (
+              <section
+                key={section.id}
+                data-section={section.id}
+                className={cn(
+                  'space-y-4 rounded-lg transition-colors',
+                  isSectionActive ? 'ring-1 ring-primary/40 bg-primary/5 p-2' : ''
+                )}
+              >
+                <h2
+                  className={cn(
+                    'text-sm font-semibold uppercase tracking-widest border-b pb-1 cursor-pointer',
+                    isSectionActive
+                      ? 'text-primary border-primary/30'
+                      : 'text-primary/70 border-gray-800'
+                  )}
+                  onClick={() =>
+                    setActiveSectionId(prev => (prev === section.id ? null : section.id))
+                  }
+                >
+                  {section.name}
+                </h2>
 
               {section.blocks.map(block => {
                 if (block.type === 'heading') {
@@ -342,7 +419,10 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
                               {measures.map((chord, mi) => (
                                 <span
                                   key={mi}
-                                  className="text-lg font-bold text-yellow-300 min-w-[2rem] text-center"
+                                  className={cn(
+                                    'font-bold text-yellow-300 min-w-[2rem] text-center',
+                                    leftHanded ? 'scale-x-[-1]' : ''
+                                  )}
                                 >
                                   {semitones !== 0 ? transposeChord(chord.trim(), semitones) : chord.trim()}
                                 </span>
@@ -364,7 +444,7 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
                               isActive ? 'bg-primary/10' : 'hover:bg-gray-800/50'
                             )}
                           >
-                            <span className="text-lg font-bold text-yellow-300">
+                            <span className="font-bold text-yellow-300">
                               {semitones !== 0
                                 ? line
                                     .split(/\s+/)
@@ -418,7 +498,7 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
                               ))}
                             </div>
                           )}
-                          <div className="text-base text-gray-100 whitespace-pre-wrap">
+                          <div className="text-gray-100 whitespace-pre-wrap">
                             {ll.lyrics || '\u00A0'}
                           </div>
                         </div>
@@ -428,7 +508,8 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
                 )
               })}
             </section>
-          ))}
+            )
+          })}
 
           {/* Bottom padding for scroll */}
           <div className="h-screen" aria-hidden />
