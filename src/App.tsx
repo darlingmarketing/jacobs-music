@@ -5,7 +5,7 @@ import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
 import { Library } from '@/pages/Library'
 import { Discover } from '@/pages/Discover'
-import { Chords } from '@/pages/Chords'
+import { ChordsNew } from '@/pages/ChordsNew'
 import { Tools } from '@/pages/Tools'
 import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
 import { AudioIdeas } from '@/pages/AudioIdeas'
@@ -36,7 +36,7 @@ function App() {
       case 'discover':
         return <Discover onNavigate={navigateTo} />
       case 'chords':
-        return <Chords />
+        return <ChordsNew />
       case 'tools':
         return <Tools />
       case 'audio':
