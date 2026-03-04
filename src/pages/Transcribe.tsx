@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
@@ -16,8 +15,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ChordTimelineEditor } from '@/components/ChordTimelineEditor'
 import { ModelComparisonView } from '@/components/ModelComparisonView'
 import { 
-  Upload, 
-  Microphone, 
   WaveformSlash,
   FloppyDisk,
   ArrowsCounterClockwise,
@@ -41,12 +38,12 @@ interface TranscribeProps {
 }
 
 export function Transcribe({ onNavigate }: TranscribeProps) {
-  const [songs, setSongs] = useKV<Song[]>('songs', [])
+  const [_songs, setSongs] = useKV<Song[]>('songs', [])
   const [recordings] = useKV<AudioRecording[]>('audio-recordings', [])
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [audioUrl, setAudioUrl] = useState<string>('')
   const [audioDuration, setAudioDuration] = useState<number>(0)
-  const [sampleRate, setSampleRate] = useState<number>(44100)
+  const [_sampleRate, setSampleRate] = useState<number>(44100)
 
   // Source selection: upload file or saved recording
   const [sourceType, setSourceType] = useState<'upload' | 'recording'>('upload')

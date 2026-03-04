@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { applySettings, DEFAULT_SETTINGS } from '../../hooks/useSettings'
-import type { Settings } from '../../hooks/useSettings'
+import { applySettings, DEFAULT_SETTINGS, type Settings } from '../../hooks/useSettings'
 
 /**
  * Tests that applySettings() correctly updates CSS custom properties and

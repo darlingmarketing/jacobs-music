@@ -1,5 +1,4 @@
-import type { NoteName } from "./notes";
-import { transposeNote } from "./notes";
+import { type NoteName, transposeNote } from "./notes";
 
 export type ScaleDef = { id: string; label: string; intervals: number[] };
 
