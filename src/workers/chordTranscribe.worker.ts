@@ -1,6 +1,8 @@
-import Essentia from 'essentia.js'
 import type { ChordSegment, WorkerMessage, TranscriptionParams, ModelPrediction } from '@/types/transcription'
 import { EnsembleModel } from '@/lib/chordModels'
+
+const ESSENTIA_ENABLED =
+  (import.meta as any).env?.VITE_ENABLE_ESSENTIA_ENGINE === "true";
 
 interface RawChordFrame {
   t: number
@@ -12,6 +14,47 @@ interface RawChordFrame {
 function postProgress(progress: number, step: string) {
   const msg: WorkerMessage = { type: 'progress', progress, step }
   self.postMessage(msg)
+}
+
+/**
+ * Pure-JS fallback HPCP computation used when essentia.js is not enabled.
+ * Uses sub-band RMS energy mapped to 12 pitch-class bins — fast and
+ * sufficient for the JS EnsembleModel when Essentia is unavailable.
+ */
+function computeHPCP(frame: Float32Array, sampleRate: number): number[] {
+  const hpcp = new Array<number>(12).fill(0)
+  const n = frame.length
+  const freqPerBin = sampleRate / n
+
+  // Split the audible range (C2=65 Hz … C8=4186 Hz) into 12 pitch-class bands
+  // based on equal-temperament centre frequencies.
+  const A4 = 440
+  const subBandSize = Math.max(1, Math.floor(n / 2 / 12))
+
+  for (let pitchClass = 0; pitchClass < 12; pitchClass++) {
+    // Centre frequency for this pitch class (relative to C = 0)
+    const semitones = pitchClass - 9 // 0 = C, 9 = A
+    const centreFreq = A4 * Math.pow(2, semitones / 12)
+    const lowerFreq = centreFreq * Math.pow(2, -1 / 24)
+    const upperFreq = centreFreq * Math.pow(2, 1 / 24)
+
+    // Accumulate across all octaves (C2–C8)
+    let energy = 0
+    let count = 0
+    for (let octave = -3; octave <= 3; octave++) {
+      const lo = Math.max(1, Math.round((lowerFreq * Math.pow(2, octave)) / freqPerBin))
+      const hi = Math.min(n / 2, Math.round((upperFreq * Math.pow(2, octave)) / freqPerBin))
+      for (let k = lo; k <= hi; k++) {
+        energy += frame[k] * frame[k]
+        count++
+      }
+    }
+    hpcp[pitchClass] = count > 0 ? Math.sqrt(energy / count) : 0
+  }
+
+  // Normalise to [0, 1]
+  const max = Math.max(...hpcp, 1e-9)
+  return hpcp.map(v => v / max)
 }
 
 function smoothChordSegments(
@@ -122,7 +165,14 @@ self.onmessage = async (e: MessageEvent) => {
   try {
     postProgress(5, 'Initializing AI Models...')
     
-    const essentia = new Essentia()
+    // Dynamically import essentia only when the feature flag is enabled.
+    // This keeps the worker compilable even without essentia.js installed.
+    let essentia: any = null
+    if (ESSENTIA_ENABLED) {
+      const EssentiaModule = await import('essentia.js').then(m => (m as any).default ?? m)
+      essentia = new EssentiaModule()
+    }
+
     const ensembleModel = new EnsembleModel()
     const useEnsemble = params.enableEnsemble !== false
     
@@ -142,12 +192,16 @@ self.onmessage = async (e: MessageEvent) => {
       
       const frameStart = i * hopSize
       const frame = audioData.slice(frameStart, frameStart + frameSize)
-      
-      const spectrum = essentia.Spectrum(essentia.arrayToVector(frame))
-      const peaks = essentia.SpectralPeaks(spectrum.spectrum)
-      
-      const hpcp = essentia.HPCP(peaks.frequencies, peaks.magnitudes)
-      const hpcpArray: number[] = Array.from(essentia.vectorToArray(hpcp.hpcp) as unknown as number[])
+
+      let hpcpArray: number[]
+      if (essentia) {
+        const spectrum = essentia.Spectrum(essentia.arrayToVector(frame))
+        const peaks = essentia.SpectralPeaks(spectrum.spectrum)
+        const hpcp = essentia.HPCP(peaks.frequencies, peaks.magnitudes)
+        hpcpArray = Array.from(essentia.vectorToArray(hpcp.hpcp) as unknown as number[])
+      } else {
+        hpcpArray = computeHPCP(frame, sampleRate)
+      }
       
       let chord: string
       let confidence: number

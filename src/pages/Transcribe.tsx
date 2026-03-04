@@ -1,16 +1,18 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
-import type { Song } from '@/types'
+import type { Song, AudioRecording } from '@/types'
 import type { ChordSegment, TranscriptionParams, WorkerMessage } from '@/types/transcription'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ChordTimelineEditor } from '@/components/ChordTimelineEditor'
 import { ModelComparisonView } from '@/components/ModelComparisonView'
 import { 
@@ -20,11 +22,16 @@ import {
   FloppyDisk,
   ArrowsCounterClockwise,
   Brain,
-  SplitVertical
+  SplitVertical,
+  Warning
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { convertSegmentsToSong, transposeSegments, quantizeSegmentBoundaries, simplifySegments, segmentsToBars } from '@/lib/transcriptionUtils'
 import { AppState } from '@/App'
+import { getAvailableEngines, type TranscribeEngine } from '@/lib/transcribe/engine'
+import { decodeAudioToBuffer } from '@/lib/audio/decode'
+import { saveTranscription, listTranscriptions, type TranscriptionSummary } from '@/lib/transcribe/repo'
+import type { TranscriptionResult } from '@/lib/transcribe/types'
 
 interface TranscribeProps {
   onNavigate: (page: AppState['currentPage'], songId?: string) => void
@@ -32,10 +39,26 @@ interface TranscribeProps {
 
 export function Transcribe({ onNavigate }: TranscribeProps) {
   const [songs, setSongs] = useKV<Song[]>('songs', [])
+  const [recordings] = useKV<AudioRecording[]>('audio-recordings', [])
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [audioUrl, setAudioUrl] = useState<string>('')
   const [audioDuration, setAudioDuration] = useState<number>(0)
   const [sampleRate, setSampleRate] = useState<number>(44100)
+
+  // Source selection: upload file or saved recording
+  const [sourceType, setSourceType] = useState<'upload' | 'recording'>('upload')
+  const [selectedRecordingId, setSelectedRecordingId] = useState<string>('')
+
+  // Engine selection
+  const engines: TranscribeEngine[] = getAvailableEngines()
+  const [selectedEngineId, setSelectedEngineId] = useState<string>(engines[0]?.id ?? 'mock')
+
+  // Recent transcriptions
+  const [recentTranscriptions, setRecentTranscriptions] = useState<TranscriptionSummary[]>([])
+
+  useEffect(() => {
+    listTranscriptions().then(setRecentTranscriptions).catch(() => {})
+  }, [])
   
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -108,10 +131,22 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
     
     return { audioData, sampleRate: audioBuffer.sampleRate }
   }
-  
+
+  /** Resolve the audio blob to analyze, from either upload or saved recording. */
+  const getSourceBlob = (): { blob: Blob; fileName?: string; recordingId?: string } | null => {
+    if (sourceType === 'upload') {
+      if (!audioFile) return null
+      return { blob: audioFile, fileName: audioFile.name }
+    }
+    const rec = (recordings ?? []).find(r => r.id === selectedRecordingId)
+    if (!rec?.blobData) return null
+    return { blob: rec.blobData, fileName: rec.title, recordingId: rec.id }
+  }
+
   const handleAnalyze = async () => {
-    if (!audioFile) {
-      toast.error('Please select an audio file first')
+    const source = getSourceBlob()
+    if (!source) {
+      toast.error(sourceType === 'upload' ? 'Please select an audio file first' : 'Please select a recording')
       return
     }
     
@@ -121,8 +156,49 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
     setSegments([])
     setProcessingComplete(false)
     
+    const selectedEngine = engines.find(e => e.id === selectedEngineId)
+
     try {
-      const { audioData, sampleRate: rate } = await decodeAudioData(audioFile)
+      // Engine-pluggable path (MockEngine + future EssentiaEngine)
+      if (selectedEngine) {
+        setProgressStep('Running engine...')
+        setProgress(10)
+        const audioBuffer = await decodeAudioToBuffer(source.blob)
+        setProgress(40)
+        const result: TranscriptionResult = await selectedEngine.transcribe(audioBuffer, {
+          sourceFileName: source.fileName,
+          sourceRecordingId: source.recordingId,
+        })
+        setProgress(80)
+        if (result.tempoBpm) setBpm(result.tempoBpm)
+        if (result.key) setSongKey(result.key)
+        // The domain ChordSegment is structurally compatible with the local type
+        setSegments(result.segments as ChordSegment[])
+        setProgress(90)
+        await saveTranscription(result)
+        const updated = await listTranscriptions()
+        setRecentTranscriptions(updated)
+        setProgress(100)
+        setProgressStep('Complete!')
+        setIsProcessing(false)
+        setProcessingComplete(true)
+        toast.success(`Transcribed ${result.segments.length} chord segments`)
+
+        // Update audio player URL for the uploaded/recording blob
+        if (!audioUrl) {
+          const url = URL.createObjectURL(source.blob)
+          setAudioUrl(url)
+          if (source.blob instanceof File) {
+            setAudioFile(source.blob as File)
+          }
+        }
+        return
+      }
+
+      // Fallback: worker-based path (used when no matching engine found)
+      const { audioData, sampleRate: rate } = await decodeAudioData(
+        source.blob instanceof File ? source.blob : new File([source.blob], source.fileName ?? 'audio')
+      )
       setSampleRate(rate)
       
       const params: TranscriptionParams = {
@@ -219,74 +295,112 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   }
   
   const previewChords = segments.length > 0 ? segmentsToBars(segments, bpm, timeSig) : ''
-  
+  const isAnalyzeDisabled = isProcessing || (sourceType === 'upload' ? !audioFile : !selectedRecordingId)
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6">
       <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-display">AI Chord Detection</h1>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-display">Transcribe From Audio</h1>
         <p className="text-lg text-muted-foreground">
-          Advanced chord recognition powered by ensemble machine learning models
+          Analyse an audio file or saved recording to extract chord segments
         </p>
       </div>
-      
-      <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="upload">
-            <Upload className="mr-2" size={16} />
-            Upload Audio
-          </TabsTrigger>
-          <TabsTrigger value="record">
-            <Microphone className="mr-2" size={16} />
-            Record
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upload" className="space-y-4">
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="audio-file">Audio File</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <Input
-                    ref={fileInputRef}
-                    id="audio-file"
-                    type="file"
-                    accept="audio/wav,audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/mp3,.m4a"
-                    onChange={handleFileSelect}
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supported: WAV, MP3, M4A, OGG, WebM (max 5 min, 50MB)
-                </p>
+
+      {/* ── Source Selection ─────────────────────────────────── */}
+      <Card className="p-6">
+        <div className="space-y-4">
+          <h3 className="font-semibold font-display">Audio Source</h3>
+
+          <RadioGroup
+            value={sourceType}
+            onValueChange={(v) => setSourceType(v as 'upload' | 'recording')}
+            className="flex gap-6"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="upload" id="src-upload" />
+              <Label htmlFor="src-upload" className="cursor-pointer">Upload audio file</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="recording" id="src-recording" />
+              <Label htmlFor="src-recording" className="cursor-pointer">Use a saved recording</Label>
+            </div>
+          </RadioGroup>
+
+          {sourceType === 'upload' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={fileInputRef}
+                  id="audio-file"
+                  type="file"
+                  accept="audio/wav,audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/mp3,.m4a"
+                  onChange={handleFileSelect}
+                  className="flex-1"
+                />
               </div>
-              
+              <p className="text-xs text-muted-foreground">Supported: WAV, MP3, M4A, OGG, WebM (max 5 min, 50 MB)</p>
               {audioFile && (
                 <div className="p-3 bg-muted/50 rounded-md space-y-1 text-sm">
                   <div><strong>File:</strong> {audioFile.name}</div>
                   <div><strong>Size:</strong> {(audioFile.size / 1024 / 1024).toFixed(2)} MB</div>
-                  <div><strong>Duration:</strong> {(audioDuration / 1000).toFixed(1)}s</div>
-                  <div><strong>Sample Rate:</strong> {sampleRate} Hz</div>
+                  {audioDuration > 0 && <div><strong>Duration:</strong> {(audioDuration / 1000).toFixed(1)}s</div>}
                 </div>
               )}
             </div>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="record" className="space-y-4">
-          <Card className="p-6">
-            <p className="text-muted-foreground text-center py-8">
-              Recording feature coming soon. Please use the Upload tab.
-            </p>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
+          )}
+
+          {sourceType === 'recording' && (
+            <div className="space-y-2">
+              {(recordings ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No saved recordings found. Record something in the Audio tab first.</p>
+              ) : (
+                <Select value={selectedRecordingId} onValueChange={setSelectedRecordingId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a recording…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(recordings ?? []).map(r => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.title} ({Math.round(r.durationMs / 1000)}s)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Engine Selection + Settings ──────────────────────── */}
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold font-display">AI Detection Settings</h3>
+            <h3 className="font-semibold font-display">Detection Settings</h3>
             <Brain size={18} className="text-primary" />
+          </div>
+
+          {/* Engine dropdown */}
+          <div className="space-y-2">
+            <Label htmlFor="engine-select">Engine</Label>
+            <div className="flex items-center gap-3">
+              <Select value={selectedEngineId} onValueChange={setSelectedEngineId}>
+                <SelectTrigger id="engine-select" className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {engines.map(e => (
+                    <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedEngineId === 'essentia' && (
+                <Badge variant="destructive" className="gap-1">
+                  <Warning size={12} />
+                  AGPL mode
+                </Badge>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,12 +448,12 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           
           <Button
             onClick={handleAnalyze}
-            disabled={!audioFile || isProcessing}
+            disabled={isAnalyzeDisabled}
             className="w-full gap-2"
             size="lg"
           >
             <WaveformSlash size={20} />
-            {isProcessing ? 'Analyzing with AI...' : 'Analyze Chords'}
+            {isProcessing ? 'Analyzing…' : 'Analyze'}
           </Button>
           
           {isProcessing && (
@@ -353,6 +467,57 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       
       {processingComplete && segments.length > 0 && (
         <>
+          {/* ── Analysis Results ─────────────────────────────────── */}
+          <Card className="p-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold font-display">Analysis Results</h3>
+
+              {/* Audio player */}
+              {audioUrl && (
+                <div>
+                  <Label className="mb-2 block">Audio Preview</Label>
+                  <audio src={audioUrl} controls className="w-full" />
+                </div>
+              )}
+
+              {/* Segments table */}
+              <div>
+                <Label className="mb-2 block">Chord Segments ({segments.length})</Label>
+                <div className="overflow-auto max-h-64 rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Start</th>
+                        <th className="px-3 py-2 text-left font-medium">End</th>
+                        <th className="px-3 py-2 text-left font-medium">Chord</th>
+                        <th className="px-3 py-2 text-left font-medium">Confidence</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {segments.map((seg, i) => (
+                        <tr key={seg.id} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                          <td className="px-3 py-1.5 font-mono">{(seg.startMs / 1000).toFixed(2)}s</td>
+                          <td className="px-3 py-1.5 font-mono">{(seg.endMs / 1000).toFixed(2)}s</td>
+                          <td className="px-3 py-1.5 font-semibold">{seg.chord}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">
+                            {seg.confidence != null ? `${Math.round(seg.confidence * 100)}%` : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">{segments.length} segments</Badge>
+                {songKey && <Badge variant="outline">Key: {songKey}</Badge>}
+                {bpm && <Badge variant="outline">{bpm} BPM</Badge>}
+                <Badge variant="secondary" className="ml-auto">Saved ✓</Badge>
+              </div>
+            </div>
+          </Card>
+
           <Card className="p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -485,15 +650,36 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           <WaveformSlash size={48} className="mx-auto text-muted-foreground mb-4" />
           <h3 className="font-semibold mb-2">No Analysis Yet</h3>
           <p className="text-muted-foreground text-sm">
-            Upload an audio file and click "Analyze Chords" to get started
+            Select an audio source, choose an engine, and click "Analyze" to get started
           </p>
           <div className="mt-6 p-4 bg-muted/50 rounded-md text-left text-sm space-y-2">
-            <p><strong>Note:</strong> This feature uses Essentia.js for chord detection.</p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>Detects major and minor triads only</li>
+              <li>Mock engine returns deterministic chord segments instantly</li>
               <li>Works best with clear, harmonic content</li>
               <li>Results require manual review and editing</li>
               <li>Processing happens entirely in your browser</li>
+            </ul>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Recent Transcriptions ────────────────────────────── */}
+      {recentTranscriptions.length > 0 && (
+        <Card className="p-6">
+          <div className="space-y-3">
+            <h3 className="font-semibold font-display">Recent Transcriptions</h3>
+            <ul className="space-y-2">
+              {recentTranscriptions.slice(0, 8).map(t => (
+                <li key={t.id} className="flex items-center gap-3 text-sm py-1 border-b border-border last:border-0">
+                  <WaveformSlash size={14} className="text-muted-foreground flex-shrink-0" />
+                  <span className="flex-1 truncate text-muted-foreground">
+                    {t.sourceFileName ?? t.sourceRecordingId ?? t.id}
+                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </span>
+                </li>
+              ))}
             </ul>
           </div>
         </Card>

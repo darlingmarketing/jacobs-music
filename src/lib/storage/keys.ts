@@ -5,4 +5,6 @@ export const DB_KEYS = {
   setlists: "setlists", // array
   recordingsIndex: "recordings:index",
   recording: (id: string) => `recording:${id}`,
+  transcriptionsIndex: "transcriptions:index", // array of {id,createdAt,sourceFileName?,sourceRecordingId?}
+  transcription: (id: string) => `transcription:${id}`,
 } as const;

@@ -22,4 +22,12 @@ describe("DB_KEYS", () => {
   it("generates recording key with id", () => {
     expect(DB_KEYS.recording("rec-456")).toBe("recording:rec-456");
   });
+
+  it("has a static transcriptionsIndex key", () => {
+    expect(DB_KEYS.transcriptionsIndex).toBe("transcriptions:index");
+  });
+
+  it("generates transcription key with id", () => {
+    expect(DB_KEYS.transcription("tx-789")).toBe("transcription:tx-789");
+  });
 });
