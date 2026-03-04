@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useKV } from '@github/spark/hooks'
 import type { Song, Section } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, FloppyDisk, Play } from '@phosphor-icons/react'
+import { ArrowLeft, FloppyDisk, Play, Share } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { SectionEditor } from '@/components/SectionEditor'
 import { MetadataPanel } from '@/components/MetadataPanel'
 import { TransposeControls } from '@/components/TransposeControls'
 import { PlayMode } from '@/components/PlayMode'
+import { ChordSuggestionWidget } from '@/components/ChordSuggestionWidget'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import { useAutosave } from '@/hooks/useAutosave'
 
 interface SongEditorV2Props {
@@ -96,6 +98,43 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
     setCurrentSong(s => s ? { ...s, sections, updatedAt: new Date().toISOString() } : s)
   }, [])
 
+  const handleShareSong = useCallback(() => {
+    if (!currentSong) return
+    const shareData = {
+      title: currentSong.title,
+      text: `Check out "${currentSong.title}"${currentSong.artist ? ` by ${currentSong.artist}` : ''} on Jacobs Music`,
+      url: window.location.href,
+    }
+    if (navigator.share) {
+      navigator.share(shareData).catch((err) => {
+        if ((err as DOMException).name !== 'AbortError') {
+          navigator.clipboard.writeText(window.location.href)
+            .then(() => toast.success('Link copied to clipboard'))
+            .catch(() => toast.error('Could not share or copy link'))
+        }
+      })
+    } else {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        toast.success('Link copied to clipboard')
+      }).catch(() => {
+        toast.error('Could not copy link to clipboard')
+      })
+    }
+  }, [currentSong])
+
+  // Collect unique chords across all sections for the suggestion widget
+  const currentChords = useMemo(() => {
+    if (!currentSong) return []
+    const chords = new Set<string>()
+    for (const section of currentSong.sections) {
+      for (const block of section.blocks) {
+        const matches = block.content.match(/\[([^\]]+)\]/g)
+        if (matches) matches.forEach(m => chords.add(m.slice(1, -1)))
+      }
+    }
+    return Array.from(chords)
+  }, [currentSong])
+
   if (!currentSong) return <div className="p-6">Loading…</div>
 
   if (playModeOpen) {
@@ -112,6 +151,10 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
         </Button>
         <h1 className="font-bold text-lg truncate flex-1 text-center">{currentSong.title}</h1>
         <div className="flex items-center gap-2 shrink-0">
+          <FavoriteButton refId={currentSong.id} type="song" size="sm" />
+          <Button onClick={handleShareSong} variant="ghost" size="icon" aria-label="Share song">
+            <Share size={18} />
+          </Button>
           <Button onClick={() => setPlayModeOpen(true)} variant="outline" size="sm" className="gap-1">
             <Play size={16} />
             Play
@@ -132,12 +175,21 @@ export function SongEditorV2({ songId, onNavigate }: SongEditorV2Props) {
 
         {/* Editor tab */}
         <TabsContent value="editor" className="flex-1 overflow-auto p-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto space-y-4">
             <SectionEditor
               sections={currentSong.sections}
               semitones={transposeSteps}
               onChange={handleSectionsChange}
             />
+            {currentChords.length > 0 && (
+              <ChordSuggestionWidget
+                currentChords={currentChords}
+                songKey={currentSong.key}
+                onInsertChord={(chord) => {
+                  toast.success(`Chord suggestion: ${chord} — add it to your song!`)
+                }}
+              />
+            )}
           </div>
         </TabsContent>
 

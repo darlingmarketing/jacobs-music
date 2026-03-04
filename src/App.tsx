@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash } from '@phosphor-icons/react'
+import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash, Compass } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -53,6 +53,8 @@ function App() {
   const navItems = [
     { id: 'dashboard' as const, icon: House, label: 'Home' },
     { id: 'songs' as const, icon: MusicNotes, label: 'Songs' },
+    { id: 'library' as const, icon: BookBookmark, label: 'Library' },
+    { id: 'discover' as const, icon: Compass, label: 'Discover' },
     { id: 'audio' as const, icon: Waveform, label: 'Audio' },
     { id: 'transcribe' as const, icon: WaveformSlash, label: 'Transcribe' },
     { id: 'chords' as const, icon: Guitar, label: 'Chords' },

@@ -68,6 +68,22 @@ export function useSetlists() {
     [setSetlists]
   )
 
+  const reorderSetlist = useCallback(
+    (setlistId: string, fromIndex: number, toIndex: number) => {
+      setSetlists(prev =>
+        (prev ?? []).map(s => {
+          if (s.id !== setlistId) return s
+          const ids = [...s.songIds]
+          if (fromIndex < 0 || fromIndex >= ids.length || toIndex < 0 || toIndex >= ids.length) return s
+          const [moved] = ids.splice(fromIndex, 1)
+          ids.splice(toIndex, 0, moved)
+          return { ...s, songIds: ids, updatedAt: new Date().toISOString() }
+        })
+      )
+    },
+    [setSetlists]
+  )
+
   return {
     setlists: setlists ?? [],
     createSetlist,
@@ -75,5 +91,6 @@ export function useSetlists() {
     addSongToSetlist,
     removeSongFromSetlist,
     updateSetlist,
+    reorderSetlist,
   }
 }

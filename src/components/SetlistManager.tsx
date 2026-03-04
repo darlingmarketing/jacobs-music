@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,7 @@ import {
   PencilSimple,
   Check,
   X,
+  DotsSixVertical,
 } from '@phosphor-icons/react'
 import { useSetlists } from '@/hooks/useSetlists'
 import type { Song, Setlist } from '@/types'
@@ -26,11 +27,12 @@ interface SetlistManagerProps {
 }
 
 export function SetlistManager({ songs, onLaunchSetlist, className }: SetlistManagerProps) {
-  const { setlists, createSetlist, deleteSetlist, addSongToSetlist, removeSongFromSetlist, updateSetlist } = useSetlists()
+  const { setlists, createSetlist, deleteSetlist, addSongToSetlist, removeSongFromSetlist, updateSetlist, reorderSetlist } = useSetlists()
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [selectedSetlistId, setSelectedSetlistId] = useState<string | null>(null)
+  const dragIndexRef = useRef<number | null>(null)
 
   const handleCreate = () => {
     const name = newName.trim()
@@ -172,15 +174,43 @@ export function SetlistManager({ songs, onLaunchSetlist, className }: SetlistMan
       {/* Song management for selected setlist */}
       {selectedSetlist && (
         <div className="mt-4 space-y-3 border-t pt-4">
-          <h4 className="font-semibold text-sm">Songs in "{selectedSetlist.name}"</h4>
+          <h4 className="font-semibold text-sm">Songs in "{selectedSetlist.name}" <span className="text-muted-foreground font-normal">(drag or use ↑↓ keys to reorder)</span></h4>
 
           {songsInSetlist.length === 0 ? (
             <p className="text-xs text-muted-foreground">No songs added yet.</p>
           ) : (
             <ScrollArea className="max-h-48">
               <div className="space-y-1">
-                {songsInSetlist.map(song => (
-                  <div key={song.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50">
+                {songsInSetlist.map((song, idx) => (
+                  <div
+                    key={song.id}
+                    draggable
+                    tabIndex={0}
+                    role="listitem"
+                    aria-label={`${song.title}, position ${idx + 1} of ${songsInSetlist.length}`}
+                    onDragStart={() => { dragIndexRef.current = idx }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      const from = dragIndexRef.current
+                      dragIndexRef.current = null
+                      if (from !== null && from !== idx && selectedSetlist) {
+                        reorderSetlist(selectedSetlist.id, from, idx)
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (!selectedSetlist) return
+                      if (e.key === 'ArrowUp' && idx > 0) {
+                        e.preventDefault()
+                        reorderSetlist(selectedSetlist.id, idx, idx - 1)
+                      } else if (e.key === 'ArrowDown' && idx < songsInSetlist.length - 1) {
+                        e.preventDefault()
+                        reorderSetlist(selectedSetlist.id, idx, idx + 1)
+                      }
+                    }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-grab active:cursor-grabbing focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <DotsSixVertical size={14} className="text-muted-foreground shrink-0" />
                     <MusicNotes size={14} className="text-muted-foreground shrink-0" />
                     <span className="text-sm flex-1">{song.title}</span>
                     {song.artist && <span className="text-xs text-muted-foreground">{song.artist}</span>}
