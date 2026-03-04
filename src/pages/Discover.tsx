@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MagnifyingGlass, Plus, Clock, MusicNote, ArrowsOut } from '@phosphor-icons/react'
 import { AppState } from '@/App'
-import { searchAllProviders, musicBrainzProvider, lrclibProvider, type ProviderSong, type MusicProvider, type ExternalSongDetails } from '@/lib/providers'
+import { searchAllProviders, musicBrainzProvider, lrclibProvider, ultimateGuitarProvider, isUltimateProviderEnabled, type ProviderSong, type MusicProvider, type ExternalSongDetails } from '@/lib/providers'
 import type { ExternalSong } from '@/types'
 import { toast } from 'sonner'
 
@@ -21,6 +21,9 @@ const PROVIDERS: { value: string; label: string; provider: MusicProvider | 'all'
   { value: 'all', label: 'All providers', provider: 'all' },
   { value: 'musicbrainz', label: 'MusicBrainz', provider: musicBrainzProvider },
   { value: 'lrclib', label: 'LRCLIB', provider: lrclibProvider },
+  ...(isUltimateProviderEnabled()
+    ? [{ value: 'ultimateguitar', label: 'Ultimate Guitar (local)', provider: ultimateGuitarProvider as MusicProvider }]
+    : []),
 ]
 
 function formatDuration(seconds: number): string {
@@ -240,6 +243,20 @@ export function Discover({ onNavigate }: DiscoverProps) {
                           )}
                           {!details.chords && !details.lyrics && (
                             <p className="text-xs text-muted-foreground">No chords or lyrics available from this provider.</p>
+                          )}
+                          {details.provider === 'UltimateGuitar' && (
+                            <p className="text-xs text-muted-foreground">
+                              Source:{' '}
+                              <a
+                                href={details.attributionUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                Ultimate Guitar
+                              </a>
+                              {' '}(educational use only)
+                            </p>
                           )}
                         </div>
                       )}

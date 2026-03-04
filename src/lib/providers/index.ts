@@ -5,35 +5,8 @@
  * lyrics or audio content.
  */
 
-export type { ExternalSongDetails } from './types'
-import type { ExternalSongDetails } from './types'
-
-export interface ProviderSong {
-  /** Unique ID within this provider's namespace */
-  providerId: string
-  /** Human-readable provider name, e.g. "MusicBrainz" */
-  provider: string
-  title: string
-  artist?: string
-  /** Attribution URL to the source page */
-  url: string
-  cachedMetadata?: {
-    duration?: number
-    releaseDate?: string
-    album?: string
-  }
-  /** Chord lines fetched from provider, if available */
-  chords?: string[]
-  /** Raw lyrics text fetched from provider, if available */
-  lyrics?: string
-}
-
-export interface MusicProvider {
-  name: string
-  search(query: string): Promise<ProviderSong[]>
-  getDetails(providerId: string): Promise<ProviderSong | null>
-  getSongDetails(providerId: string): Promise<ExternalSongDetails | null>
-}
+export type { ExternalSongDetails, ProviderSong, MusicProvider } from './types'
+import type { ExternalSongDetails, ProviderSong, MusicProvider } from './types'
 
 // ---------------------------------------------------------------------------
 // MusicBrainz provider
@@ -166,7 +139,12 @@ export const lrclibProvider: MusicProvider = {
 // Aggregated search across all providers
 // ---------------------------------------------------------------------------
 
-export const allProviders: MusicProvider[] = [musicBrainzProvider, lrclibProvider]
+export { ultimateGuitarProvider, getTab, isUltimateProviderEnabled } from './ultimateGuitarProvider'
+import { ultimateGuitarProvider, isUltimateProviderEnabled } from './ultimateGuitarProvider'
+
+export const allProviders: MusicProvider[] = isUltimateProviderEnabled()
+  ? [musicBrainzProvider, lrclibProvider, ultimateGuitarProvider]
+  : [musicBrainzProvider, lrclibProvider]
 
 export async function searchAllProviders(query: string): Promise<ProviderSong[]> {
   const results = await Promise.allSettled(allProviders.map(p => p.search(query)))
