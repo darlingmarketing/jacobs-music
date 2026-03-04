@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash, Compass } from '@phosphor-icons/react'
+import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash, Compass, ChartBar } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -13,9 +13,10 @@ import { AudioIdeas } from '@/pages/AudioIdeas'
 import { Transcribe } from '@/pages/Transcribe'
 import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
 import { PlayMode } from '@/components/PlayMode'
+import { Progress } from '@/pages/Progress'
 import type { Song, Setlist } from '@/types'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress'
 
 export interface AppState {
   currentPage: Page
@@ -102,6 +103,8 @@ function App() {
           : <Transcribe onNavigate={navigateTo} />
       case 'editor':
         return <SongEditor songId={state.editingSongId} onNavigate={navigateTo} />
+      case 'progress':
+        return <Progress />
       default:
         return <Dashboard onNavigate={navigateTo} />
     }
@@ -115,7 +118,8 @@ function App() {
     { id: 'audio' as const, icon: Waveform, label: 'Audio' },
     { id: 'transcribe' as const, icon: WaveformSlash, label: 'Transcribe' },
     { id: 'chords' as const, icon: Guitar, label: 'Chords' },
-    { id: 'tools' as const, icon: Wrench, label: 'Tools' }
+    { id: 'tools' as const, icon: Wrench, label: 'Tools' },
+    { id: 'progress' as const, icon: ChartBar, label: 'Progress' },
   ]
 
   return (

@@ -9,6 +9,7 @@ import { Play, Stop, Metronome as MetronomeIcon } from '@phosphor-icons/react'
 import { audioEngine } from '@/lib/audioSynthesis'
 import type { Section } from '@/types'
 import { cn } from '@/lib/utils'
+import { usePracticeSession } from '@/hooks/usePracticeSession'
 
 interface PracticeLoopProps {
   sections: Section[]
@@ -16,6 +17,7 @@ interface PracticeLoopProps {
   timeSignature?: string
   activeSectionId?: string | null
   onSectionChange?: (sectionId: string) => void
+  songId?: string
 }
 
 const DEFAULT_TEMPO = 120
@@ -33,6 +35,7 @@ export function PracticeLoop({
   timeSignature = '4/4',
   activeSectionId,
   onSectionChange,
+  songId,
 }: PracticeLoopProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string>(
     activeSectionId ?? sections[0]?.id ?? ''
@@ -52,6 +55,8 @@ export function PracticeLoop({
   const loopTimerRef = useRef<number | null>(null)
 
   const beatsPerMeasure = parseInt(timeSignature.split('/')[0] ?? '4', 10) || 4
+
+  const practiceSession = usePracticeSession('loop', { songId })
 
   // Keep selectedSection in sync with activeSectionId from parent
   useEffect(() => {
@@ -108,6 +113,8 @@ export function PracticeLoop({
         setIsCountingIn(false)
         setCurrentBeat(null)
         setCompletedLoops(0)
+        practiceSession.setBpm(effectiveTempo)
+        practiceSession.stop()
         return
       }
 
@@ -125,6 +132,7 @@ export function PracticeLoop({
         // drives the metronome clicks and beat indicator.
         scheduleBeats(effectiveTempo, beatsPerMeasure, () => {
           if (stopRef.current) return
+          practiceSession.markLoopComplete()
           const nextSpeed = currentSpeedPercent + incrementPerLoop
           runLoop(loopIndex + 1, Math.min(nextSpeed, MAX_SPEED))
         })
@@ -137,15 +145,17 @@ export function PracticeLoop({
         startLoop()
       }
     },
-    [tempo, loopCount, countIn, scheduleBeats, beatsPerMeasure, incrementPerLoop]
+    [tempo, loopCount, countIn, scheduleBeats, beatsPerMeasure, incrementPerLoop, practiceSession]
   )
 
   const startLooping = useCallback(() => {
     stopRef.current = false
     setIsLooping(true)
     setCompletedLoops(0)
+    practiceSession.setBpm(Math.round((tempo * speedPercent) / 100))
+    practiceSession.start()
     runLoop(0, speedPercent)
-  }, [runLoop, speedPercent])
+  }, [runLoop, speedPercent, practiceSession, tempo])
 
   const stopLooping = useCallback(() => {
     stopRef.current = true
@@ -154,7 +164,9 @@ export function PracticeLoop({
     setIsCountingIn(false)
     setCurrentBeat(null)
     setCompletedLoops(0)
-  }, [])
+    practiceSession.setBpm(Math.round((tempo * speedPercent) / 100))
+    practiceSession.stop()
+  }, [practiceSession, tempo, speedPercent])
 
   // Cleanup on unmount
   useEffect(() => {
