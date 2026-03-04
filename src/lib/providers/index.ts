@@ -139,10 +139,12 @@ export const lrclibProvider: MusicProvider = {
 // Aggregated search across all providers
 // ---------------------------------------------------------------------------
 
-export { ultimateGuitarProvider, getTab } from './ultimateGuitarProvider'
-import { ultimateGuitarProvider } from './ultimateGuitarProvider'
+export { ultimateGuitarProvider, getTab, isUltimateProviderEnabled } from './ultimateGuitarProvider'
+import { ultimateGuitarProvider, isUltimateProviderEnabled } from './ultimateGuitarProvider'
 
-export const allProviders: MusicProvider[] = [musicBrainzProvider, lrclibProvider, ultimateGuitarProvider]
+export const allProviders: MusicProvider[] = isUltimateProviderEnabled()
+  ? [musicBrainzProvider, lrclibProvider, ultimateGuitarProvider]
+  : [musicBrainzProvider, lrclibProvider]
 
 export async function searchAllProviders(query: string): Promise<ProviderSong[]> {
   const results = await Promise.allSettled(allProviders.map(p => p.search(query)))
