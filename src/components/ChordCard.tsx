@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SpeakerHigh } from '@phosphor-icons/react'
 import { audioEngine } from '@/lib/audioSynthesis'
+import { FavoriteButton } from '@/components/FavoriteButton'
 
 interface ChordCardProps {
   chord: Chord
@@ -16,12 +17,13 @@ export function ChordCard({ chord, leftHanded = false }: ChordCardProps) {
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-semibold text-lg">{chord.name}</h3>
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
           {chord.tags?.map(tag => (
             <Badge key={tag} variant="secondary" className="text-xs capitalize">
               {tag}
             </Badge>
           ))}
+          <FavoriteButton refId={chord.id} type="chord" size="sm" />
         </div>
       </div>
       <div className="overflow-x-auto">

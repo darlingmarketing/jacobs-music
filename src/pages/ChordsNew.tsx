@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { ChordCard } from '@/components/ChordCard'
 import { CHORD_DATABASE } from '@/lib/chordDatabaseNew'
 import { MagnifyingGlass } from '@phosphor-icons/react'
@@ -17,7 +19,7 @@ const CHORD_TYPES = [
 export function ChordsNew() {
   const [query, setQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
-  const [leftHanded] = useKV<boolean>('leftHandedMode', false)
+  const [leftHanded, setLeftHanded] = useKV<boolean>('leftHandedMode', false)
 
   const filtered = CHORD_DATABASE.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -26,8 +28,18 @@ export function ChordsNew() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Chord Dictionary</h1>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="left-handed-toggle"
+            checked={leftHanded ?? false}
+            onCheckedChange={setLeftHanded}
+          />
+          <Label htmlFor="left-handed-toggle" className="text-sm cursor-pointer">
+            Left-handed
+          </Label>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -65,7 +77,7 @@ export function ChordsNew() {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(chord => (
-            <ChordCard key={chord.id} chord={chord} leftHanded={leftHanded} />
+            <ChordCard key={chord.id} chord={chord} leftHanded={leftHanded ?? false} />
           ))}
         </div>
       ) : (

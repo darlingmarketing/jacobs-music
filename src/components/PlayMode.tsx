@@ -118,7 +118,9 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
   const [playing, setPlaying] = useState(false)
   const [semitones, setSemitones] = useState(0)
   const [loop, setLoop] = useState(false)
+  const [scrollMode, setScrollMode] = useState<'manual' | 'bpm'>('manual')
   const [speed, setSpeed] = useState(settings?.autoscrollSpeed ?? 30)
+  const [pxPerBeat, setPxPerBeat] = useState(40)
   const [activeLine, setActiveLine] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const [showPracticeLoop, setShowPracticeLoop] = useState(false)
@@ -127,7 +129,12 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
   // Left-handed mode from settings
   const leftHanded = settings?.leftHandedMode ?? false
 
-  const containerRef = useAutoscroll(playing, speed, { pauseAtSections: true })
+  const containerRef = useAutoscroll(playing, speed, {
+    pauseAtSections: true,
+    mode: scrollMode,
+    tempoBpm: song.tempo,
+    pxPerBeat,
+  })
 
   const transposedKey = song.key ? transposeChord(song.key, semitones) : null
   const capoSuggestions = getCapoSuggestions(semitones, song.key)
@@ -198,20 +205,58 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
           </Button>
         </div>
 
-        {/* Speed slider */}
-        <div className="flex items-center gap-2 min-w-[140px]">
-          <span className="text-xs text-gray-400 shrink-0">Speed</span>
-          <Slider
-            min={5}
-            max={120}
-            step={5}
-            value={[speed]}
-            onValueChange={([v]) => setSpeed(v)}
-            className="w-24"
-            aria-label="Autoscroll speed"
-          />
-          <span className="text-xs text-gray-400 tabular-nums w-6">{speed}</span>
+        {/* Scroll mode + speed controls */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={scrollMode === 'manual' ? 'secondary' : 'outline'}
+            onClick={() => setScrollMode('manual')}
+            className="text-xs border-gray-700 text-gray-300 px-2"
+            aria-label="Manual scroll mode"
+          >
+            Manual
+          </Button>
+          <Button
+            size="sm"
+            variant={scrollMode === 'bpm' ? 'secondary' : 'outline'}
+            onClick={() => setScrollMode('bpm')}
+            className="text-xs border-gray-700 text-gray-300 px-2"
+            aria-pressed={scrollMode === 'bpm'}
+            aria-label="BPM scroll mode"
+          >
+            BPM
+          </Button>
         </div>
+
+        {scrollMode === 'manual' ? (
+          <div className="flex items-center gap-2 min-w-[140px]">
+            <span className="text-xs text-gray-400 shrink-0">Speed</span>
+            <Slider
+              min={5}
+              max={120}
+              step={5}
+              value={[speed]}
+              onValueChange={([v]) => setSpeed(v)}
+              className="w-24"
+              aria-label="Autoscroll speed"
+            />
+            <span className="text-xs text-gray-400 tabular-nums w-6">{speed}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 min-w-[160px]">
+            <span className="text-xs text-gray-400 shrink-0">px/beat</span>
+            <Slider
+              min={10}
+              max={120}
+              step={5}
+              value={[pxPerBeat]}
+              onValueChange={([v]) => setPxPerBeat(v)}
+              className="w-24"
+              aria-label="Pixels per beat"
+            />
+            <span className="text-xs text-gray-400 tabular-nums w-6">{pxPerBeat}</span>
+          </div>
+        )}
 
         {/* Font size controls */}
         <div className="flex items-center gap-1">

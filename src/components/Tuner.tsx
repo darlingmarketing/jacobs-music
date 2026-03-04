@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Microphone, MicrophoneSlash } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +13,85 @@ const DEFAULT_SENSITIVITY = 0.01
 const SENSITIVITY_HIGH_THRESHOLD = 0.005
 const SENSITIVITY_MEDIUM_THRESHOLD = 0.02
 const NEAREST_STRING_THRESHOLD_HZ = 15
+
+interface StringRef {
+  label: string
+  freq: number
+}
+
+interface TuningPreset {
+  name: string
+  strings: StringRef[]
+}
+
+const TUNING_PRESETS: TuningPreset[] = [
+  {
+    name: 'E Standard (EADGBe)',
+    strings: [
+      { label: 'E2', freq: 82.41 },
+      { label: 'A2', freq: 110.0 },
+      { label: 'D3', freq: 146.83 },
+      { label: 'G3', freq: 196.0 },
+      { label: 'B3', freq: 246.94 },
+      { label: 'E4', freq: 329.63 },
+    ],
+  },
+  {
+    name: 'Drop D (DADGBe)',
+    strings: [
+      { label: 'D2', freq: 73.42 },
+      { label: 'A2', freq: 110.0 },
+      { label: 'D3', freq: 146.83 },
+      { label: 'G3', freq: 196.0 },
+      { label: 'B3', freq: 246.94 },
+      { label: 'E4', freq: 329.63 },
+    ],
+  },
+  {
+    name: 'D Standard (DGCFAd)',
+    strings: [
+      { label: 'D2', freq: 73.42 },
+      { label: 'G2', freq: 98.0 },
+      { label: 'C3', freq: 130.81 },
+      { label: 'F3', freq: 174.61 },
+      { label: 'A3', freq: 220.0 },
+      { label: 'D4', freq: 293.66 },
+    ],
+  },
+  {
+    name: 'Open G (DGDGBd)',
+    strings: [
+      { label: 'D2', freq: 73.42 },
+      { label: 'G2', freq: 98.0 },
+      { label: 'D3', freq: 146.83 },
+      { label: 'G3', freq: 196.0 },
+      { label: 'B3', freq: 246.94 },
+      { label: 'D4', freq: 293.66 },
+    ],
+  },
+  {
+    name: 'Open D (DADf#Ad)',
+    strings: [
+      { label: 'D2', freq: 73.42 },
+      { label: 'A2', freq: 110.0 },
+      { label: 'D3', freq: 146.83 },
+      { label: 'F#3', freq: 185.0 },
+      { label: 'A3', freq: 220.0 },
+      { label: 'D4', freq: 293.66 },
+    ],
+  },
+  {
+    name: 'Half Step Down (Eb)',
+    strings: [
+      { label: 'Eb2', freq: 77.78 },
+      { label: 'Ab2', freq: 103.83 },
+      { label: 'Db3', freq: 138.59 },
+      { label: 'Gb3', freq: 185.0 },
+      { label: 'Bb3', freq: 233.08 },
+      { label: 'Eb4', freq: 311.13 },
+    ],
+  },
+]
 
 function freqToNote(frequency: number): { note: string; octave: number; cents: number; midi: number } {
   const midi = 12 * (Math.log2(frequency / A4_FREQ)) + A4_MIDI
@@ -63,6 +143,7 @@ export function Tuner() {
   const [frequency, setFrequency] = useState<number | null>(null)
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY)
   const [error, setError] = useState<string | null>(null)
+  const [tuningPreset, setTuningPreset] = useState<TuningPreset>(TUNING_PRESETS[0])
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -142,6 +223,29 @@ export function Tuner() {
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-card rounded-lg border border-border">
+      {/* Tuning preset selector */}
+      <div className="space-y-1">
+        <Label className="text-sm text-muted-foreground">Tuning</Label>
+        <Select
+          value={tuningPreset.name}
+          onValueChange={name => {
+            const preset = TUNING_PRESETS.find(p => p.name === name)
+            if (preset) setTuningPreset(preset)
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TUNING_PRESETS.map(p => (
+              <SelectItem key={p.name} value={p.name}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="text-center space-y-1">
         {detected ? (
           <>
@@ -185,21 +289,14 @@ export function Tuner() {
         </div>
       </div>
 
-      {/* Standard guitar tuning reference */}
-      <div className="grid grid-cols-6 gap-1 text-center">
-        {[
-          { string: 'E2', freq: 82.41 },
-          { string: 'A2', freq: 110.0 },
-          { string: 'D3', freq: 146.83 },
-          { string: 'G3', freq: 196.0 },
-          { string: 'B3', freq: 246.94 },
-          { string: 'E4', freq: 329.63 },
-        ].map(s => {
+      {/* String reference for selected tuning */}
+      <div className="grid gap-1 text-center" style={{ gridTemplateColumns: `repeat(${tuningPreset.strings.length}, minmax(0, 1fr))` }}>
+        {tuningPreset.strings.map(s => {
           const isNearest =
             frequency !== null && Math.abs(frequency - s.freq) < NEAREST_STRING_THRESHOLD_HZ
           return (
             <div
-              key={s.string}
+              key={s.label}
               className={cn(
                 'rounded py-1 text-xs font-medium border',
                 isNearest
@@ -207,7 +304,7 @@ export function Tuner() {
                   : 'border-border text-muted-foreground'
               )}
             >
-              {s.string}
+              {s.label}
             </div>
           )
         })}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useKV } from '@github/spark/hooks'
 import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash, Compass } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
@@ -10,8 +11,10 @@ import { Tools } from '@/pages/Tools'
 import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
 import { AudioIdeas } from '@/pages/AudioIdeas'
 import { Transcribe } from '@/pages/Transcribe'
+import { PlayMode } from '@/components/PlayMode'
+import type { Song } from '@/types'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'play'
 
 export interface AppState {
   currentPage: Page
@@ -20,12 +23,28 @@ export interface AppState {
 
 function App() {
   const [state, setState] = useState<AppState>({ currentPage: 'dashboard' })
+  const [songs] = useKV<Song[]>('songs', [])
 
   const navigateTo = (page: Page, songId?: string) => {
     setState({ currentPage: page, editingSongId: songId })
   }
 
   const renderPage = () => {
+    // Full-screen play mode – rendered outside normal layout
+    if (state.currentPage === 'play') {
+      const song = (songs ?? []).find(s => s.id === state.editingSongId)
+      if (song) {
+        return (
+          <PlayMode
+            song={song}
+            onExit={() => navigateTo('editor', song.id)}
+          />
+        )
+      }
+      // Fallback if song not found
+      return <Dashboard onNavigate={navigateTo} />
+    }
+
     switch (state.currentPage) {
       case 'dashboard':
         return <Dashboard onNavigate={navigateTo} />
