@@ -32,10 +32,10 @@
 | 13 | No `src/lib/storage/` directory | `idb-keyval` not installed; no structured KV layer | **Fixed** — added `keys.ts` + `kv.ts` + installed `idb-keyval` |
 | 14 | No `src/lib/songbook/` directory | No canonical Songbook schema with structured sections/blocks | **Fixed** — added `src/lib/songbook/types.ts` |
 | 15 | `tsconfig.json` | `strict` mode not enabled (only `strictNullChecks`) | Noted — enabling full strict would break existing code |
-| 16 | No smoke test / unit test setup | No `vitest`/`jest` configuration; no test files | Noted — stack uses Vite so Vitest is the natural fit |
+| 16 | No smoke test / unit test setup | No `vitest`/`jest` configuration; no test files | **Fixed** — added Vitest, `test` script, and unit tests for `songbook/types` and `storage/keys` |
 | 17 | `src/hooks/useAutosave.ts` | Stores `SongVersion` snapshots using `useKV` (Spark KV) — tied to cloud, not local-first | Superseded by new `kvSet` storage layer |
 | 18 | `src/lib/providers/index.ts` | `any` casts throughout MusicBrainz/LRCLIB parsers | Pre-existing |
-| 19 | `package.json` | No `test` script defined | Pre-existing |
+| 19 | `package.json` | No `test` script defined | **Fixed** — added `"test": "vitest run"` |
 | 20 | `src/main.tsx` | No `ErrorBoundary` wrapping root render | Pre-existing (`ErrorFallback.tsx` exists but unused at root) |
 
 ---
@@ -45,17 +45,22 @@
 ### New files
 
 ```
-src/lib/songbook/types.ts   — Canonical Songbook domain types
-src/lib/storage/keys.ts     — Centralised IndexedDB KV key constants
-src/lib/storage/kv.ts       — Thin idb-keyval wrapper (kvGet/kvSet/kvDel/kvKeys)
-docs/PHASE0_AUDIT.md        — This file
+src/lib/songbook/types.ts          — Canonical Songbook domain types
+src/lib/songbook/types.test.ts     — Unit tests for Songbook types (Vitest)
+src/lib/storage/keys.ts            — Centralised IndexedDB KV key constants
+src/lib/storage/keys.test.ts       — Unit tests for DB_KEYS (Vitest)
+src/lib/storage/kv.ts              — Thin idb-keyval wrapper (kvGet/kvSet/kvDel/kvKeys)
+eslint.config.js                   — ESLint v9 flat config (TS + React Hooks + React Refresh)
+docs/PHASE0_AUDIT.md               — This file
 ```
 
-### Dependency added
+### Dependencies added
 
 | Package | Version | Purpose |
 |---|---|---|
 | `idb-keyval` | ^6.x | Lightweight IndexedDB key-value store |
+| `vitest` | ^3.x | Unit test runner (Vite-native) |
+| `@vitest/coverage-v8` | ^3.x | Coverage reporter for Vitest |
 
 ### Folder conventions locked
 
@@ -76,7 +81,10 @@ docs/PHASE0_AUDIT.md        — This file
 
 ```
 ✓ vite build passes (tsc --noCheck)
+✓ npm run lint passes (ESLint v9 flat config — 0 errors, warnings only)
+✓ npm test passes  (7 unit tests via Vitest)
 ✓ idb-keyval installed (no known CVEs)
+✓ vitest + @vitest/coverage-v8 installed (no known CVEs)
 ```
 
 Pre-existing TypeScript errors (items 1–7 above) are unrelated to Phase 0 changes and left for a dedicated fix pass.

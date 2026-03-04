@@ -9,13 +9,14 @@ export function transposeChord(chord: string, semitones: number): string {
   
   if (!match) return chord
   
-  let [, root, suffix] = match
-  
+  const [, root, suffix] = match
+  let normalizedRoot = root
+
   if (root in FLAT_MAP) {
-    root = FLAT_MAP[root]
+    normalizedRoot = FLAT_MAP[root]
   }
-  
-  const currentIndex = NOTE_MAP.indexOf(root)
+
+  const currentIndex = NOTE_MAP.indexOf(normalizedRoot)
   if (currentIndex === -1) return chord
   
   const newIndex = (currentIndex + semitones + 12) % 12
