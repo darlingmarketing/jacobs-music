@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useKV } from '@github/spark/hooks'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
@@ -113,7 +114,17 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 pb-20 md:pb-6">
-        {renderPage()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${state.currentPage}-${state.editingSongId ?? 'none'}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderPage()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <BottomNav currentPage={state.currentPage} onNavigate={navigateTo} />

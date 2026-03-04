@@ -141,7 +141,7 @@ function AudioPlayer({ recording, onDelete }: AudioPlayerProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate">{recording.title}</h3>
           {recording.notes && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            <p className="prose prose-sm dark:prose-invert text-muted-foreground line-clamp-2 mt-1">
               {recording.notes}
             </p>
           )}
