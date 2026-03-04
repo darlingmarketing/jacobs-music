@@ -7,9 +7,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MagnifyingGlass, Plus, Clock, MusicNote } from '@phosphor-icons/react'
+import { MagnifyingGlass, Plus, Clock, MusicNote, ArrowsOut } from '@phosphor-icons/react'
 import { AppState } from '@/App'
-import { searchAllProviders, musicBrainzProvider, lrclibProvider, type ProviderSong, type MusicProvider } from '@/lib/providers'
+import { searchAllProviders, musicBrainzProvider, lrclibProvider, type ProviderSong, type MusicProvider, type ExternalSongDetails } from '@/lib/providers'
 import type { ExternalSong } from '@/types'
 import { toast } from 'sonner'
 
@@ -38,6 +38,8 @@ export function Discover({ onNavigate }: DiscoverProps) {
   const [searched, setSearched] = useState(false)
   const [savingWith, setSavingWith] = useState<ProviderSong | null>(null)
   const [pasteContent, setPasteContent] = useState('')
+  const [loadedDetails, setLoadedDetails] = useState<Record<string, ExternalSongDetails>>({})
+  const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set())
 
   const saved = externalSongs ?? []
 
@@ -68,11 +70,36 @@ export function Discover({ onNavigate }: DiscoverProps) {
       toast.info('Already saved to library')
       return
     }
+    const key = `${song.provider}-${song.providerId}`
+    const details = loadedDetails[key]
+    setPasteContent(details?.lyrics ?? '')
     setSavingWith(song)
+  }
+
+  const handleLoadDetails = async (song: ProviderSong) => {
+    const key = `${song.provider}-${song.providerId}`
+    if (loadedDetails[key] || loadingDetails.has(key)) return
+    setLoadingDetails(prev => new Set(prev).add(key))
+    try {
+      const entry = PROVIDERS.find(p => p.label === song.provider)
+      const provider = entry && entry.provider !== 'all' ? (entry.provider as MusicProvider) : null
+      const details = provider ? await provider.getSongDetails(song.providerId) : null
+      if (details) {
+        setLoadedDetails(prev => ({ ...prev, [key]: details }))
+      } else {
+        toast.info('No additional details available for this song.')
+      }
+    } catch {
+      toast.error('Failed to load song details.')
+    } finally {
+      setLoadingDetails(prev => { const s = new Set(prev); s.delete(key); return s })
+    }
   }
 
   const confirmSave = () => {
     if (!savingWith) return
+    const key = `${savingWith.provider}-${savingWith.providerId}`
+    const details = loadedDetails[key]
     const entry: ExternalSong = {
       id: crypto.randomUUID(),
       provider: savingWith.provider,
@@ -81,6 +108,8 @@ export function Discover({ onNavigate }: DiscoverProps) {
       artist: savingWith.artist,
       url: savingWith.url,
       cachedMetadata: savingWith.cachedMetadata,
+      chords: details?.chords,
+      lyrics: pasteContent.trim() || details?.lyrics || undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -170,51 +199,88 @@ export function Discover({ onNavigate }: DiscoverProps) {
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">{results.length} results</p>
           <div className="grid gap-3">
-            {results.map(song => (
-              <Card key={`${song.provider}-${song.providerId}`} className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium truncate">{song.title}</h3>
-                      <Badge variant="outline" className="text-xs shrink-0">{song.provider}</Badge>
+            {results.map(song => {
+              const key = `${song.provider}-${song.providerId}`
+              const details = loadedDetails[key]
+              const isLoadingDetail = loadingDetails.has(key)
+              return (
+                <Card key={key} className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-medium truncate">{song.title}</h3>
+                        <Badge variant="outline" className="text-xs shrink-0">{song.provider}</Badge>
+                      </div>
+                      {song.artist && <p className="text-sm text-muted-foreground">{song.artist}</p>}
+                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                        {song.cachedMetadata?.album && <span>{song.cachedMetadata.album}</span>}
+                        {song.cachedMetadata?.duration && (
+                          <span className="flex items-center gap-1">
+                            <Clock size={11} />
+                            {formatDuration(song.cachedMetadata.duration)}
+                          </span>
+                        )}
+                        {song.cachedMetadata?.releaseDate && (
+                          <span>{song.cachedMetadata.releaseDate}</span>
+                        )}
+                      </div>
+                      {details && (
+                        <div className="mt-3 space-y-2">
+                          {details.chords && details.chords.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Chords</p>
+                              <pre className="text-xs font-mono bg-muted rounded p-2 overflow-x-auto whitespace-pre-wrap">{details.chords.join('\n')}</pre>
+                            </div>
+                          )}
+                          {details.lyrics && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Lyrics</p>
+                              <pre className="text-xs font-mono bg-muted rounded p-2 max-h-40 overflow-y-auto whitespace-pre-wrap">{details.lyrics}</pre>
+                            </div>
+                          )}
+                          {!details.chords && !details.lyrics && (
+                            <p className="text-xs text-muted-foreground">No chords or lyrics available from this provider.</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {song.artist && <p className="text-sm text-muted-foreground">{song.artist}</p>}
-                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                      {song.cachedMetadata?.album && <span>{song.cachedMetadata.album}</span>}
-                      {song.cachedMetadata?.duration && (
-                        <span className="flex items-center gap-1">
-                          <Clock size={11} />
-                          {formatDuration(song.cachedMetadata.duration)}
-                        </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={song.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View ↗
+                      </a>
+                      {!details && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleLoadDetails(song)}
+                          disabled={isLoadingDetail}
+                          className="gap-1"
+                          title="Load chords and lyrics"
+                        >
+                          <ArrowsOut size={14} />
+                          {isLoadingDetail ? 'Loading…' : 'Details'}
+                        </Button>
                       )}
-                      {song.cachedMetadata?.releaseDate && (
-                        <span>{song.cachedMetadata.releaseDate}</span>
-                      )}
+                      <Button
+                        size="sm"
+                        variant={isSaved(song) ? 'secondary' : 'outline'}
+                        onClick={() => handleSave(song)}
+                        disabled={isSaved(song)}
+                        className="gap-1"
+                      >
+                        <Plus size={14} />
+                        {isSaved(song) ? 'Saved' : 'Save'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={song.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      View ↗
-                    </a>
-                    <Button
-                      size="sm"
-                      variant={isSaved(song) ? 'secondary' : 'outline'}
-                      onClick={() => handleSave(song)}
-                      disabled={isSaved(song)}
-                      className="gap-1"
-                    >
-                      <Plus size={14} />
-                      {isSaved(song) ? 'Saved' : 'Save'}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              )
+            })}
           </div>
         </div>
       )}
@@ -233,33 +299,39 @@ export function Discover({ onNavigate }: DiscoverProps) {
           <DialogHeader>
             <DialogTitle>Save to Library</DialogTitle>
           </DialogHeader>
-          {savingWith && (
-            <div className="space-y-4">
-              <div>
-                <p className="font-medium">{savingWith.title}</p>
-                {savingWith.artist && (
-                  <p className="text-sm text-muted-foreground">{savingWith.artist}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Paste chords / lyrics{' '}
-                  <span className="text-muted-foreground font-normal">(optional)</span>
-                </label>
-                <Textarea
-                  placeholder="Paste your own chords or lyrics here…"
-                  value={pasteContent}
-                  onChange={e => setPasteContent(e.target.value)}
-                  className="min-h-[120px] font-mono text-sm"
-                />
-                {pasteContent && (
-                  <p className="text-xs text-muted-foreground">
-                    Your pasted content will be stored locally and is not shared.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {savingWith && (() => {
+              const savingKey = `${savingWith.provider}-${savingWith.providerId}`
+              const providerLyrics = loadedDetails[savingKey]?.lyrics
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-medium">{savingWith.title}</p>
+                    {savingWith.artist && (
+                      <p className="text-sm text-muted-foreground">{savingWith.artist}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Chords / Lyrics{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
+                    <Textarea
+                      placeholder="Paste your own chords or lyrics here…"
+                      value={pasteContent}
+                      onChange={e => setPasteContent(e.target.value)}
+                      className="min-h-[120px] font-mono text-sm"
+                    />
+                    {pasteContent && (
+                      <p className="text-xs text-muted-foreground">
+                        {providerLyrics
+                          ? 'Lyrics pre-filled from provider. Edit as needed – stored locally and not shared.'
+                          : 'Your pasted content will be stored locally and is not shared.'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setSavingWith(null)}>Cancel</Button>
             <Button onClick={confirmSave} className="gap-1">
