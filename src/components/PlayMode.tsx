@@ -6,6 +6,7 @@ import {
   Play,
   Stop,
   ArrowLeft,
+  CaretRight,
   CaretUp,
   CaretDown,
   ArrowsClockwise,
@@ -24,6 +25,10 @@ interface PlayModeProps {
   song: Song
   settings?: Partial<UserSettings>
   onExit: () => void
+  /** Called when the user advances to the next song in a setlist */
+  onNextSong?: () => void
+  /** Position info when playing a setlist, e.g. { current: 2, total: 5 } */
+  setlistPosition?: { current: number; total: number }
 }
 
 // Regex to detect lines that only contain chord notation (no lyrics).
@@ -114,7 +119,7 @@ function getCapoSuggestions(
   return suggestions.slice(0, 3)
 }
 
-export function PlayMode({ song, settings, onExit }: PlayModeProps) {
+export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }: PlayModeProps) {
   const [playing, setPlaying] = useState(false)
   const [semitones, setSemitones] = useState(0)
   const [loop, setLoop] = useState(false)
@@ -333,6 +338,25 @@ export function PlayMode({ song, settings, onExit }: PlayModeProps) {
           <Badge variant="outline" className="border-gray-700 text-gray-300">
             Capo {song.capo}
           </Badge>
+        )}
+
+        {setlistPosition && (
+          <Badge className="bg-gray-800 text-gray-400 border-gray-700">
+            {setlistPosition.current} / {setlistPosition.total}
+          </Badge>
+        )}
+
+        {onNextSong && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onNextSong}
+            className="gap-1 border-gray-700 text-gray-300 hover:text-white ml-auto"
+            aria-label="Next song in setlist"
+          >
+            Next
+            <CaretRight size={14} />
+          </Button>
         )}
 
         {/* Capo suggestions */}

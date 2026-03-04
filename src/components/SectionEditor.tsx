@@ -8,7 +8,7 @@ import { Plus, Trash, DotsSixVertical } from '@phosphor-icons/react'
 import { BlockEditor } from '@/components/BlockEditor'
 import { cn } from '@/lib/utils'
 
-const BLOCK_TYPES: BlockType[] = ['lyrics', 'chords', 'tab', 'note', 'audio', 'heading', 'divider']
+const BLOCK_TYPES: BlockType[] = ['lyrics', 'chords', 'tab', 'note', 'audio', 'audio_ref', 'heading', 'divider']
 const TAB_DEFAULT = 'e|---|\nB|---|\nG|---|\nD|---|\nA|---|\nE|---|'
 
 interface SectionEditorProps {

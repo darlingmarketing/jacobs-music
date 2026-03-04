@@ -72,6 +72,7 @@ export function AudioRecorder({ onSave, linkedSongId, linkedSectionId }: AudioRe
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
   const [permissionDenied, setPermissionDenied] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -188,7 +189,7 @@ export function AudioRecorder({ onSave, linkedSongId, linkedSectionId }: AudioRe
       userId: 'local-user',
       title: title.trim(),
       notes,
-      tags: [],
+      tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
       mimeType: audioBlob.type,
       durationMs: duration,
       storageType: 'indexeddb' as StorageType,
@@ -225,6 +226,7 @@ export function AudioRecorder({ onSave, linkedSongId, linkedSectionId }: AudioRe
     }
     setTitle('')
     setNotes('')
+    setTagsInput('')
     chunksRef.current = []
   }
 
@@ -346,6 +348,13 @@ export function AudioRecorder({ onSave, linkedSongId, linkedSectionId }: AudioRe
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="bg-background min-h-[80px]"
+            />
+
+            <Input
+              placeholder="Tags (comma-separated, e.g. riff, verse, chorus)"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className="bg-background"
             />
 
             <div className="flex gap-2">

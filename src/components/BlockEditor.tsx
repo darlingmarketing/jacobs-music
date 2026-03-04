@@ -3,7 +3,9 @@ import type { Block, BlockType, AudioRecording } from '@/types'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Trash, Eye, PencilSimple } from '@phosphor-icons/react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Trash, Eye, PencilSimple, Play, Pause, Waveform } from '@phosphor-icons/react'
+import { useKV } from '@github/spark/hooks'
 import { SlashCommandMenu } from '@/components/SlashCommandMenu'
 import type { SlashCommand } from '@/components/SlashCommandMenu'
 import { parseLyricsWithChords } from '@/lib/chordParser'
@@ -17,6 +19,109 @@ interface BlockEditorProps {
   onChange: (updates: Partial<Block>) => void
   onDelete: () => void
   onConvert: (type: BlockType) => void
+}
+
+/** Inline editor/player for an audio_ref block */
+function AudioRefBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Block
+  onChange: (updates: Partial<Block>) => void
+}) {
+  const [recordings] = useKV<AudioRecording[]>('audio-recordings', [])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
+
+  const allRecordings = recordings ?? []
+  const selectedRecording = allRecordings.find(r => r.id === block.audioRecordingId) ?? null
+
+  const stopAndClean = () => {
+    if (audioEl) {
+      audioEl.pause()
+      setAudioEl(null)
+      setIsPlaying(false)
+    }
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = null
+    }
+  }
+
+  const handleSelect = (id: string) => {
+    const rec = allRecordings.find(r => r.id === id)
+    onChange({ audioRecordingId: id, content: rec?.title ?? '' })
+    stopAndClean()
+  }
+
+  const togglePlay = () => {
+    if (!selectedRecording?.blobData && !selectedRecording?.storageRef) return
+    if (!audioEl) {
+      let url: string
+      if (selectedRecording.blobData) {
+        url = URL.createObjectURL(selectedRecording.blobData)
+        blobUrlRef.current = url
+      } else {
+        url = selectedRecording.storageRef!
+      }
+      const audio = new Audio(url)
+      audio.addEventListener('ended', () => setIsPlaying(false))
+      audio.addEventListener('pause', () => setIsPlaying(false))
+      audio.addEventListener('play', () => setIsPlaying(true))
+      setAudioEl(audio)
+      audio.play()
+    } else {
+      if (isPlaying) {
+        audioEl.pause()
+      } else {
+        audioEl.play()
+      }
+    }
+  }
+
+  if (allRecordings.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground p-2">
+        <Waveform size={16} />
+        No recordings yet. Record audio ideas in the Audio page first.
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 p-2">
+      <Select value={block.audioRecordingId ?? ''} onValueChange={handleSelect}>
+        <SelectTrigger className="flex-1 h-8 text-sm">
+          <SelectValue placeholder="Select a recording…" />
+        </SelectTrigger>
+        <SelectContent>
+          {allRecordings.map(r => (
+            <SelectItem key={r.id} value={r.id}>
+              {r.title}
+              {r.tags.length > 0 && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {r.tags.slice(0, 2).join(', ')}
+                </span>
+              )}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {selectedRecording && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 shrink-0"
+          onClick={togglePlay}
+          aria-label={isPlaying ? 'Pause recording' : 'Play recording'}
+        >
+          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+        </Button>
+      )}
+    </div>
+  )
 }
 
 function transposeContent(content: string, semitones: number): string {
@@ -94,6 +199,15 @@ function BlockPreview({ block, semitones = 0 }: { block: Block; semitones?: numb
     return (
       <div className="text-sm text-muted-foreground italic">
         🎙 Audio memo{content ? `: ${content}` : ''}
+      </div>
+    )
+  }
+
+  if (block.type === 'audio_ref') {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground italic">
+        <Waveform size={14} className="shrink-0" />
+        {content || 'Audio reference'}
       </div>
     )
   }
@@ -204,6 +318,8 @@ export function BlockEditor({ block, semitones = 0, onChange, onDelete, onConver
               onChange({ content: recording.title, audioRecordingId: recording.id })
             }}
           />
+        ) : block.type === 'audio_ref' ? (
+          <AudioRefBlockEditor block={block} onChange={onChange} />
         ) : isPreview ? (
           <div className="p-2 min-h-[4rem]">
             <BlockPreview block={block} semitones={semitones} />

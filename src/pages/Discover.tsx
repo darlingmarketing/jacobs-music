@@ -3,7 +3,9 @@ import { useKV } from '@github/spark/hooks'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MagnifyingGlass, Plus, Clock, MusicNote } from '@phosphor-icons/react'
 import { AppState } from '@/App'
@@ -35,6 +37,8 @@ export function Discover({ onNavigate }: DiscoverProps) {
   const [results, setResults] = useState<ProviderSong[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [savingWith, setSavingWith] = useState<ProviderSong | null>(null)
+  const [pasteContent, setPasteContent] = useState('')
 
   const saved = externalSongs ?? []
 
@@ -65,21 +69,27 @@ export function Discover({ onNavigate }: DiscoverProps) {
       toast.info('Already saved to library')
       return
     }
+    setSavingWith(song)
+  }
+
+  const confirmSave = () => {
+    if (!savingWith) return
     const entry: ExternalSong = {
       id: crypto.randomUUID(),
-      provider: song.provider,
-      providerId: song.providerId,
-      title: song.title,
-      artist: song.artist,
-      url: song.url,
-      cachedMetadata: song.cachedMetadata,
+      provider: savingWith.provider,
+      providerId: savingWith.providerId,
+      title: savingWith.title,
+      artist: savingWith.artist,
+      url: savingWith.url,
+      cachedMetadata: savingWith.cachedMetadata,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     setExternalSongs(prev => [...(prev ?? []), entry])
-    toast.success(`Saved "${song.title}" to library`)
+    toast.success(`Saved "${savingWith.title}" to library`)
+    setSavingWith(null)
+    setPasteContent('')
   }
-
   const isSaved = (song: ProviderSong) =>
     saved.some(s => s.providerId === song.providerId && s.provider === song.provider)
 
@@ -217,6 +227,49 @@ export function Discover({ onNavigate }: DiscoverProps) {
           </p>
         </Card>
       )}
+
+      {/* Save with optional paste dialog */}
+      <Dialog open={savingWith !== null} onOpenChange={open => { if (!open) { setSavingWith(null); setPasteContent('') } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save to Library</DialogTitle>
+          </DialogHeader>
+          {savingWith && (
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium">{savingWith.title}</p>
+                {savingWith.artist && (
+                  <p className="text-sm text-muted-foreground">{savingWith.artist}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Paste chords / lyrics{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <Textarea
+                  placeholder="Paste your own chords or lyrics here…"
+                  value={pasteContent}
+                  onChange={e => setPasteContent(e.target.value)}
+                  className="min-h-[120px] font-mono text-sm"
+                />
+                {pasteContent && (
+                  <p className="text-xs text-muted-foreground">
+                    Your pasted content will be stored locally and is not shared.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSavingWith(null)}>Cancel</Button>
+            <Button onClick={confirmSave} className="gap-1">
+              <Plus size={14} />
+              Save to Library
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
