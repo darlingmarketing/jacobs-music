@@ -23,6 +23,10 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src')
     }
   },
+  worker: {
+    // ES module format required to support dynamic import() inside workers.
+    format: 'es',
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
