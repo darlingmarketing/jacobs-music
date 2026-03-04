@@ -16,12 +16,13 @@ import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
 import { PlayMode } from '@/components/PlayMode'
 import { Progress } from '@/pages/Progress'
 import { Settings } from '@/pages/Settings'
+import { StyleGuide } from '@/pages/StyleGuide'
 import { BottomNav, navItems } from '@/components/nav/BottomNav'
 import { useSettings } from '@/hooks/useSettings'
 import { registerKeyboardShortcuts, registerShortcut } from '@/lib/keyboardShortcuts'
 import type { Song, Setlist } from '@/types'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress' | 'settings'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress' | 'settings' | 'style-guide'
 
 export interface AppState {
   currentPage: Page
@@ -140,6 +141,8 @@ function App() {
         return <Progress />
       case 'settings':
         return <Settings />
+      case 'style-guide':
+        return <StyleGuide />
       default:
         return <Dashboard onNavigate={navigateTo} />
     }

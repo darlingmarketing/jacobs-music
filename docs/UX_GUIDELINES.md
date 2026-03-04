@@ -1,5 +1,7 @@
 # UX Guidelines – Jacobs Music
 
+> See [PHASE0_AUDIT.md](./PHASE0_AUDIT.md) for the original baseline audit that shaped these guidelines.
+
 ## Colour System
 
 All colours are defined as OKLCH values in `src/index.css` and mapped to Radix colour palettes in `src/styles/theme.css`.
@@ -147,3 +149,96 @@ Use Framer Motion for interactive feedback:
 ### Accessibility
 
 Framer Motion automatically respects `prefers-reduced-motion`. When a user has enabled the reduced-motion system preference, all animations are disabled without any additional code. Do not override this behaviour.
+
+---
+
+## Layout Patterns
+
+### Card
+
+```tsx
+import { Card } from '@/components/ui/card'
+import { Heading } from '@/components/typography/Heading'
+import { Text } from '@/components/typography/Text'
+
+<Card className="p-6 space-y-2">
+  <Heading level={3}>Card title</Heading>
+  <Text size="body" muted>Supporting body copy goes here.</Text>
+</Card>
+```
+
+### List
+
+```tsx
+<ul className="divide-y divide-border">
+  {items.map(item => (
+    <li key={item.id} className="flex items-center gap-4 py-3 px-4">
+      <span className="flex-1 text-sm font-medium">{item.name}</span>
+      <Badge variant="secondary">{item.status}</Badge>
+    </li>
+  ))}
+</ul>
+```
+
+### Modal (Dialog)
+
+```tsx
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Modal title</DialogTitle>
+    </DialogHeader>
+    <p className="text-sm text-muted-foreground">Modal body content.</p>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+      <Button onClick={handleConfirm}>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+### Page layout (mobile-first)
+
+```tsx
+<div className="max-w-screen-lg mx-auto px-4 md:px-6 py-6 space-y-8 pb-20 md:pb-6">
+  <Heading level={1}>Page Title</Heading>
+  <section className="space-y-4">
+    {/* content */}
+  </section>
+</div>
+```
+
+---
+
+## Accessibility Considerations
+
+- All interactive elements must be keyboard-reachable (use native `<button>` or Radix primitives which include ARIA roles and keyboard handlers by default).
+- Provide a visible focus ring — the global `outline-ring/50` style in `main.css` covers this automatically.
+- Text contrast must meet WCAG AA (≥ 4.5:1 for normal text).
+- Touch targets must be at least **44 × 44 px** on mobile; use `min-h-11 min-w-11` (Tailwind `h-11`/`w-11` = 2.75 rem = 44 px).
+- Avoid colour-only information cues — pair colour with an icon or label.
+- Use `aria-label` on icon-only buttons.
+
+---
+
+## Style Guide
+
+An interactive style guide is available at the **`/style-guide`** route in the running dev server. It showcases:
+
+- Buttons (all variants and sizes)
+- Inputs, Textareas, Selects, Sliders
+- Cards, Badges, Separators
+- Tooltips, Dialogs, Popovers
+- Bottom navigation and top navigation bars
+- Fretboard diagrams (2-D and 3-D)
+- Practice countdown animation
+- Charts (bar, line)

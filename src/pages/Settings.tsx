@@ -4,8 +4,7 @@ import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
-import { useSettings } from '@/hooks/useSettings'
-import type { AccentColour, Theme } from '@/hooks/useSettings'
+import { useSettings, type AccentColour, type Theme } from '@/hooks/useSettings'
 
 const ACCENT_SWATCHES: { value: AccentColour; label: string; color: string }[] = [
   { value: 'blue', label: 'Blue', color: 'oklch(0.45 0.15 250)' },

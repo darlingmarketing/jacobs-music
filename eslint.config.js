@@ -28,6 +28,7 @@ export default tseslint.config(
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      "no-duplicate-imports": "error",
     },
   }
 );
