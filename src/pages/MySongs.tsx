@@ -5,9 +5,14 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, MagnifyingGlass, Pencil, Sparkle } from '@phosphor-icons/react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Plus, MagnifyingGlass, Pencil, Sparkle, Star, Queue } from '@phosphor-icons/react'
 import { AppState } from '@/App'
 import { SmartSearch } from '@/components/SmartSearch'
+import { FavoriteButton } from '@/components/FavoriteButton'
+import { AddToSetlistButton } from '@/components/SetlistManager'
+import { useFavorites } from '@/hooks/useFavorites'
+import { useSetlists } from '@/hooks/useSetlists'
 
 interface MySongsProps {
   onNavigate: (page: AppState['currentPage'], songId?: string) => void
@@ -16,13 +21,29 @@ interface MySongsProps {
 export function MySongs({ onNavigate }: MySongsProps) {
   const [songs] = useKV<Song[]>('songs', [])
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<'all' | 'favorites' | string>('all')
+  const { isFavorite, favorites } = useFavorites()
+  const { setlists } = useSetlists()
   const allSongs = songs || []
-  
-  const filteredSongs = allSongs.filter(song =>
-    song.title.toLowerCase().includes(search.toLowerCase()) ||
-    song.artist?.toLowerCase().includes(search.toLowerCase()) ||
-    song.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
-  )
+
+  const filteredSongs = allSongs.filter(song => {
+    const matchesSearch =
+      song.title.toLowerCase().includes(search.toLowerCase()) ||
+      song.artist?.toLowerCase().includes(search.toLowerCase()) ||
+      song.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
+
+    if (!matchesSearch) return false
+
+    if (filter === 'favorites') {
+      return isFavorite(song.id, 'song')
+    }
+    if (filter !== 'all') {
+      // filter is a setlist ID
+      const setlist = setlists.find(s => s.id === filter)
+      return setlist ? setlist.songIds.includes(song.id) : true
+    }
+    return true
+  })
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
@@ -47,17 +68,41 @@ export function MySongs({ onNavigate }: MySongsProps) {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
-          <div className="relative">
-            <MagnifyingGlass size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search songs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <MagnifyingGlass size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search songs..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-44 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All songs</SelectItem>
+                <SelectItem value="favorites">
+                  <span className="flex items-center gap-2">
+                    <Star size={14} className="text-yellow-400" weight="fill" />
+                    Favorites
+                  </span>
+                </SelectItem>
+                {setlists.map(sl => (
+                  <SelectItem key={sl.id} value={sl.id}>
+                    <span className="flex items-center gap-2">
+                      <Queue size={14} />
+                      {sl.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {filteredSongs.length === 0 && search === '' ? (
+          {filteredSongs.length === 0 && search === '' && filter === 'all' ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground mb-4">No songs yet. Start creating!</p>
               <Button onClick={() => onNavigate('editor')} className="gap-2">
@@ -67,7 +112,13 @@ export function MySongs({ onNavigate }: MySongsProps) {
             </Card>
           ) : filteredSongs.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-muted-foreground">No songs match "{search}"</p>
+              <p className="text-muted-foreground">
+                {filter === 'favorites'
+                  ? 'No favorite songs yet. Star songs to add them here.'
+                  : filter !== 'all'
+                  ? 'No songs in this setlist match your search.'
+                  : `No songs match "${search}"`}
+              </p>
             </Card>
           ) : (
             <div className="grid gap-3">
@@ -96,9 +147,14 @@ export function MySongs({ onNavigate }: MySongsProps) {
                         </div>
                       )}
                     </div>
-                    <Button variant="ghost" size="icon" className="text-primary">
-                      <Pencil size={20} />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <FavoriteButton refId={song.id} type="song" size="sm" />
+                      <AddToSetlistButton songId={song.id} songs={allSongs} />
+                      <Button variant="ghost" size="icon" className="text-primary"
+                        onClick={e => { e.stopPropagation(); onNavigate('editor', song.id) }}>
+                        <Pencil size={20} />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}

@@ -1,57 +1,59 @@
+import type { ModelPrediction } from '@/types/transcription'
+
 export type ChordQuality = 'major' | 'minor' | '7' | 'maj7' | 'min7' | 'sus2' | 'sus4' | 'dim' | 'aug'
 
 export interface ChordProfile {
   root: number
-  weights: number[]
+  quality: ChordQuality
+  name: string
   intervals: number[]
   weights: number[]
-  name: string
- 
+}
 
-  },
+const CHORD_ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
-  },
-    interv
-  },
-    intervals: [0, 3, 7, 10]
+const CHORD_TEMPLATES: Record<ChordQuality, { intervals: number[]; weights: number[] }> = {
+  major: {
+    intervals: [0, 4, 7],
+    weights: [1.0, 0.8, 0.9],
   },
   minor: {
     intervals: [0, 3, 7],
-    weights: [1.0, 0.8, 0.9]
-    
+    weights: [1.0, 0.8, 0.9],
+  },
   '7': {
     intervals: [0, 4, 7, 10],
-    weights: [1.0, 0.75, 0.85, 0.7]
+    weights: [1.0, 0.75, 0.85, 0.7],
   },
   maj7: {
     intervals: [0, 4, 7, 11],
-    weights: [1.0, 0.75, 0.85, 0.7]
+    weights: [1.0, 0.75, 0.85, 0.7],
   },
   min7: {
     intervals: [0, 3, 7, 10],
-    weights: [1.0, 0.75, 0.85, 0.7]
+    weights: [1.0, 0.75, 0.85, 0.7],
   },
   sus2: {
     intervals: [0, 2, 7],
-    weights: [1.0, 0.75, 0.9]
+    weights: [1.0, 0.75, 0.9],
   },
   sus4: {
-      profiles.push({
-    weights: [1.0, 0.75, 0.9]
-    
+    intervals: [0, 5, 7],
+    weights: [1.0, 0.75, 0.9],
+  },
   dim: {
     intervals: [0, 3, 6],
-    weights: [1.0, 0.8, 0.85]
-  
+    weights: [1.0, 0.8, 0.85],
+  },
   aug: {
-
-    weights: [1.0, 0.8, 0.85]
-  
+    intervals: [0, 4, 8],
+    weights: [1.0, 0.8, 0.85],
+  },
 }
 
 export function generateChordProfiles(): ChordProfile[] {
   const profiles: ChordProfile[] = []
-  
+
   for (let root = 0; root < 12; root++) {
     for (const [quality, template] of Object.entries(CHORD_TEMPLATES)) {
       const name = formatChordName(root, quality as ChordQuality)
@@ -60,150 +62,106 @@ export function generateChordProfiles(): ChordProfile[] {
         quality: quality as ChordQuality,
         intervals: template.intervals,
         weights: template.weights,
-      return
+        name,
       })
     }
   }
-  
+
   return profiles
 }
 
 export function formatChordName(root: number, quality: ChordQuality): string {
   const rootName = CHORD_ROOTS[root]
-  
+
   switch (quality) {
-    case 'major':
-      return rootName
-    let bestFeatu
-      return `${rootName}m`
-      let sco
-      return `${rootName}7`
-    case 'maj7':
-      return `${rootName}maj7`
-    case 'min7':
-      return `${rootName}m7`
-      
-      return `${rootName}sus2`
-        bestChor
-      return `${rootName}sus4`
-    case 'dim':
-      return `${rootName}dim`
-    case 'aug':
-      return `${rootName}aug`
-    return {
-      return rootName
-   
+    case 'major': return rootName
+    case 'minor': return `${rootName}m`
+    case '7': return `${rootName}7`
+    case 'maj7': return `${rootName}maj7`
+    case 'min7': return `${rootName}m7`
+    case 'sus2': return `${rootName}sus2`
+    case 'sus4': return `${rootName}sus4`
+    case 'dim': return `${rootName}dim`
+    case 'aug': return `${rootName}aug`
+    default: return rootName
+  }
 }
 
-      
-        strengt
-      
-    }
-    return strength
-}
+export class HPCPPatternModel {
+  private profiles: ChordProfile[]
 
-  private weights: number[][]
   constructor() {
-  
-  
-    const inputSize = 12
-   
-  
-      w1[i] = []
-        w1[i][j] = (Math.r
-    }
-    return w1
-  
-    const hiddenSize = 24
-    
-      
-        sum += hpcp[j] * this.weights[i][j]
-      hidden[i] = this.relu(sum)
-    
-    for
-      
-        const hiddenIdx = pitchClass * 2
-          score += hidden[hiddenIdx] * profile.weights[i]
-      
-    }
-    const maxScore = Math.max(...sc
-    const sumExp = expScores.red
-    
-    let bestProb = probabi
-      if (probabilities[i]
-        bestIdx = i
-    }
-    ret
-     
-    
-  
-    return Math.max(0, 
-}
-export class EnsembleModel {
-  private harmonicModel: Har
-  
-   
- 
+    this.profiles = generateChordProfiles()
+  }
 
-    const predictions = [
-      this.harmonicModel.predict(h
-  
-    const weights
-      'harmonic-spectrum': 0.35,
-   
-  
-    for (const pred of predictions) {
-      const weightedScore = pred.confidence * weight
-    
-    
+  predict(hpcp: number[]): ModelPrediction {
     let bestScore = -1
-    
-        bestScore = score
+    let bestChord = 'N.C.'
+
+    for (const profile of this.profiles) {
+      let score = 0
+      for (let i = 0; i < profile.intervals.length; i++) {
+        const pitchClass = (profile.root + profile.intervals[i]) % 12
+        score += hpcp[pitchClass] * profile.weights[i]
       }
-    
-      
-      modelVotes: predictions
+      if (score > bestScore) {
+        bestScore = score
+        bestChord = profile.name
+      }
+    }
+
+    return {
+      chord: bestChord,
+      confidence: Math.min(1, bestScore),
+      modelId: 'hpcp-pattern',
+    }
   }
-  getPredictions(hpcp: number[]): ModelPrediction[] {
-      this.hpcpModel.predict(hpcp),
-      this.neuralModel.predict(hpcp)
+}
+
+export class HarmonicSpectrumModel {
+  private profiles: ChordProfile[]
+
+  constructor() {
+    this.profiles = generateChordProfiles()
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  private computeHarmonicStrength(hpcp: number[]): number[] {
+    const strength = new Array(12).fill(0)
+    for (let i = 0; i < 12; i++) {
+      strength[i] = hpcp[i]
+      const fifth = (i + 7) % 12
       if (hpcp[fifth] > 0.3) {
         strength[i] += hpcp[fifth] * 0.4
       }
-      
       strength[i] = Math.min(1, strength[i])
     }
-    
     return strength
   }
-}
 
+  predict(hpcp: number[]): ModelPrediction {
+    const strength = this.computeHarmonicStrength(hpcp)
+    let bestScore = -1
+    let bestChord = 'N.C.'
+
+    for (const profile of this.profiles) {
+      let score = 0
+      for (let i = 0; i < profile.intervals.length; i++) {
+        const pitchClass = (profile.root + profile.intervals[i]) % 12
+        score += strength[pitchClass] * profile.weights[i]
+      }
+      if (score > bestScore) {
+        bestScore = score
+        bestChord = profile.name
+      }
+    }
+
+    return {
+      chord: bestChord,
+      confidence: Math.min(1, bestScore),
+      modelId: 'harmonic-spectrum',
+    }
+  }
+}
 export class NeuralNetworkSimulator {
   private profiles: ChordProfile[]
   private weights: number[][]
