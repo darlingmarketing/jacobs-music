@@ -23,7 +23,9 @@ import {
   ArrowsCounterClockwise,
   Brain,
   SplitVertical,
-  Warning
+  Warning,
+  MusicNote,
+  Timer
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { convertSegmentsToSong, transposeSegments, quantizeSegmentBoundaries, simplifySegments, segmentsToBars } from '@/lib/transcriptionUtils'
@@ -32,9 +34,10 @@ import { getAvailableEngines, type TranscribeEngine } from '@/lib/transcribe/eng
 import { decodeAudioToBuffer } from '@/lib/audio/decode'
 import { saveTranscription, listTranscriptions, type TranscriptionSummary } from '@/lib/transcribe/repo'
 import type { TranscriptionResult } from '@/lib/transcribe/types'
+import { transcriptionToSongDraft } from '@/lib/transcribe/convertToSongbook'
 
 interface TranscribeProps {
-  onNavigate: (page: AppState['currentPage'], songId?: string) => void
+  onNavigate: (page: AppState['currentPage'], songId?: string, transcriptionId?: string) => void
 }
 
 export function Transcribe({ onNavigate }: TranscribeProps) {
@@ -55,6 +58,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
 
   // Recent transcriptions
   const [recentTranscriptions, setRecentTranscriptions] = useState<TranscriptionSummary[]>([])
+  const [lastTxId, setLastTxId] = useState<string | null>(null)
 
   useEffect(() => {
     listTranscriptions().then(setRecentTranscriptions).catch(() => {})
@@ -176,6 +180,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
         setSegments(result.segments as ChordSegment[])
         setProgress(90)
         await saveTranscription(result)
+        setLastTxId(result.id)
         const updated = await listTranscriptions()
         setRecentTranscriptions(updated)
         setProgress(100)
@@ -258,6 +263,65 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   const handleSimplify = () => {
     setSegments(simplifySegments(segments, 500))
     toast.success('Simplified chord timeline')
+  }
+
+  const handleConvertToSongDraft = async () => {
+    if (segments.length === 0) {
+      toast.error('No chord segments to convert')
+      return
+    }
+    try {
+      const timeSigParts = timeSig.split('/')
+      const tsBeats = parseInt(timeSigParts[0] ?? '4', 10) || 4
+      const tsBeatValue = parseInt(timeSigParts[1] ?? '4', 10) || 4
+      const sbSong = transcriptionToSongDraft(
+        {
+          id: lastTxId ?? crypto.randomUUID(),
+          segments: segments as any,
+          tempoBpm: bpm,
+          key: songKey || undefined,
+          sourceFileName: audioFile?.name,
+          createdAt: new Date().toISOString(),
+        },
+        { title: songTitle || audioFile?.name, timeSig: { beats: tsBeats, beatValue: tsBeatValue } }
+      )
+      const user = await window.spark.user()
+      const chordContent = sbSong.sections[0]?.blocks
+        .filter((b: any) => b.type === 'chord_grid')
+        .map((b: any) =>
+          (b.measures as Array<{ chords: string[] }>)
+            .map((m) => m.chords.join(' '))
+            .join(' | ')
+        )
+        .join('\n') ?? ''
+      const newSong: Song = {
+        id: sbSong.id,
+        userId: user.login,
+        title: (sbSong.meta as any).title,
+        description: (sbSong.meta as any).description,
+        key: songKey || undefined,
+        tempo: bpm,
+        timeSignature: timeSig,
+        tuning: 'Standard',
+        tags: ['transcribed'],
+        sections: [
+          {
+            id: sbSong.sections[0].id,
+            name: 'Transcription',
+            type: 'custom',
+            order: 0,
+            blocks: [{ id: `blk_${Date.now()}`, type: 'chords', content: chordContent }],
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setSongs((current) => [...(current ?? []), newSong])
+      toast.success('Song draft created!')
+      setTimeout(() => onNavigate('editor', newSong.id), 400)
+    } catch (err) {
+      toast.error(`Failed to convert: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
   
   const handleCreateSong = async () => {
@@ -543,10 +607,12 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                 <ModelComparisonView segments={segments} />
               ) : (
                 <ChordTimelineEditor
-                  segments={segments}
+                  segments={segments as any}
                   audioUrl={audioUrl}
                   audioDurationMs={audioDuration}
-                  onChange={setSegments}
+                  tempoBpm={bpm}
+                  timeSig={{ beats: Number(timeSig.split('/')[0] ?? 4), beatValue: Number(timeSig.split('/')[1] ?? 4) }}
+                  onChange={(s) => setSegments(s as ChordSegment[])}
                 />
               )}
             </div>
@@ -622,19 +688,35 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                 />
               </div>
               
-              <div className="flex gap-2">
-                <Button onClick={handleCreateSong} className="flex-1 gap-2" size="lg">
-                  <FloppyDisk size={20} />
-                  Create Song
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={handleConvertToSongDraft} className="flex-1 gap-2" size="lg">
+                  <MusicNote size={20} />
+                  Convert to Song Draft
                 </Button>
+                <Button onClick={handleCreateSong} variant="outline" className="flex-1 gap-2" size="lg">
+                  <FloppyDisk size={20} />
+                  Create Song (Legacy)
+                </Button>
+                {lastTxId && (
+                  <Button
+                    onClick={() => onNavigate('transcribe-timeline', undefined, lastTxId)}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Timer size={20} />
+                    Open in Timeline
+                  </Button>
+                )}
                 <Button 
                   onClick={() => {
                     setSegments([])
                     setProcessingComplete(false)
                     setAudioFile(null)
                     setAudioUrl('')
+                    setLastTxId(null)
                   }} 
-                  variant="outline"
+                  variant="ghost"
                   size="lg"
                 >
                   <ArrowsCounterClockwise size={20} />
@@ -678,6 +760,15 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(t.createdAt).toLocaleDateString()}
                   </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => onNavigate('transcribe-timeline', undefined, t.id)}
+                  >
+                    <Timer size={12} className="mr-1" />
+                    Timeline
+                  </Button>
                 </li>
               ))}
             </ul>

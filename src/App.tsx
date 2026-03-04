@@ -11,10 +11,11 @@ import { Tools } from '@/pages/Tools'
 import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
 import { AudioIdeas } from '@/pages/AudioIdeas'
 import { Transcribe } from '@/pages/Transcribe'
+import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
 import { PlayMode } from '@/components/PlayMode'
 import type { Song, Setlist } from '@/types'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'play'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play'
 
 export interface AppState {
   currentPage: Page
@@ -23,6 +24,8 @@ export interface AppState {
   setlistId?: string
   /** Current position within the setlist */
   setlistIndex?: number
+  /** Transcription id for the timeline page */
+  transcriptionId?: string
 }
 
 function App() {
@@ -30,8 +33,8 @@ function App() {
   const [songs] = useKV<Song[]>('songs', [])
   const [setlists] = useKV<Setlist[]>('setlists', [])
 
-  const navigateTo = (page: Page, songId?: string) => {
-    setState({ currentPage: page, editingSongId: songId })
+  const navigateTo = (page: Page, songId?: string, transcriptionId?: string) => {
+    setState({ currentPage: page, editingSongId: songId, transcriptionId })
   }
 
   const launchSetlist = (setlistId: string, index: number) => {
@@ -93,6 +96,10 @@ function App() {
         return <AudioIdeas />
       case 'transcribe':
         return <Transcribe onNavigate={navigateTo} />
+      case 'transcribe-timeline':
+        return state.transcriptionId
+          ? <TranscribeTimeline transcriptionId={state.transcriptionId} onNavigate={navigateTo} />
+          : <Transcribe onNavigate={navigateTo} />
       case 'editor':
         return <SongEditor songId={state.editingSongId} onNavigate={navigateTo} />
       default:

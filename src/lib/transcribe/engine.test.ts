@@ -59,7 +59,7 @@ describe("EssentiaEngine", () => {
   it("throws when transcribe is called (stub)", async () => {
     const engine = new EssentiaEngine();
     const buf = makeAudioBuffer(1);
-    await expect(engine.transcribe(buf)).rejects.toThrow("EssentiaEngine not implemented");
+    await expect(engine.transcribe(buf)).rejects.toThrow("EssentiaEngine not enabled");
   });
 });
 
