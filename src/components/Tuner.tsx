@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { Label } from '@/components/ui/label'
 import { Microphone, MicrophoneSlash } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const A4_FREQ = 440
 const A4_MIDI = 69
-const MIN_RMS_THRESHOLD = 0.01
+const DEFAULT_SENSITIVITY = 0.01
+const SENSITIVITY_HIGH_THRESHOLD = 0.005
+const SENSITIVITY_MEDIUM_THRESHOLD = 0.02
 const NEAREST_STRING_THRESHOLD_HZ = 15
 
 function freqToNote(frequency: number): { note: string; octave: number; cents: number; midi: number } {
@@ -19,7 +23,7 @@ function freqToNote(frequency: number): { note: string; octave: number; cents: n
 }
 
 // Autocorrelation-based pitch detection
-function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
+function detectPitch(buffer: Float32Array, sampleRate: number, minRmsThreshold: number): number | null {
   const SIZE = buffer.length
   const MAX_SAMPLES = Math.floor(SIZE / 2)
   let bestOffset = -1
@@ -31,7 +35,7 @@ function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
   }
   rms = Math.sqrt(rms / SIZE)
 
-  if (rms < MIN_RMS_THRESHOLD) return null
+  if (rms < minRmsThreshold) return null
 
   let lastCorrelation = 1
   for (let offset = 1; offset < MAX_SAMPLES; offset++) {
@@ -57,12 +61,16 @@ function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
 export function Tuner() {
   const [isListening, setIsListening] = useState(false)
   const [frequency, setFrequency] = useState<number | null>(null)
+  const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY)
   const [error, setError] = useState<string | null>(null)
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const animFrameRef = useRef<number | null>(null)
+
+  const sensitivityRef = useRef(sensitivity)
+  useEffect(() => { sensitivityRef.current = sensitivity }, [sensitivity])
 
   const analyse = useCallback(() => {
     const analyser = analyserRef.current
@@ -72,7 +80,7 @@ export function Tuner() {
     analyser.getFloatTimeDomainData(buffer)
 
     const sampleRate = audioContextRef.current?.sampleRate ?? 44100
-    const pitch = detectPitch(buffer, sampleRate)
+    const pitch = detectPitch(buffer, sampleRate, sensitivityRef.current)
     setFrequency(pitch)
 
     animFrameRef.current = requestAnimationFrame(analyse)
@@ -208,6 +216,22 @@ export function Tuner() {
       {error && (
         <p className="text-sm text-destructive text-center">{error}</p>
       )}
+
+      {/* Sensitivity control */}
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <Label className="text-xs text-muted-foreground">Sensitivity</Label>
+          <span>{sensitivity < SENSITIVITY_HIGH_THRESHOLD ? 'High' : sensitivity < SENSITIVITY_MEDIUM_THRESHOLD ? 'Medium' : 'Low'}</span>
+        </div>
+        <Slider
+          min={0.001}
+          max={0.05}
+          step={0.001}
+          value={[sensitivity]}
+          onValueChange={([v]) => setSensitivity(v)}
+          aria-label="Tuner sensitivity"
+        />
+      </div>
 
       <Button
         onClick={isListening ? stopListening : startListening}
