@@ -97,6 +97,8 @@ export interface ExternalSong {
     difficulty?: string
     duration?: number
   }
+  chords?: string[]
+  lyrics?: string
   createdAt: string
   updatedAt: string
 }

@@ -5,6 +5,9 @@
  * lyrics or audio content.
  */
 
+export type { ExternalSongDetails } from './types'
+import type { ExternalSongDetails } from './types'
+
 export interface ProviderSong {
   /** Unique ID within this provider's namespace */
   providerId: string
@@ -19,12 +22,17 @@ export interface ProviderSong {
     releaseDate?: string
     album?: string
   }
+  /** Chord lines fetched from provider, if available */
+  chords?: string[]
+  /** Raw lyrics text fetched from provider, if available */
+  lyrics?: string
 }
 
 export interface MusicProvider {
   name: string
   search(query: string): Promise<ProviderSong[]>
   getDetails(providerId: string): Promise<ProviderSong | null>
+  getSongDetails(providerId: string): Promise<ExternalSongDetails | null>
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +89,18 @@ export const musicBrainzProvider: MusicProvider = {
       },
     }
   },
+
+  async getSongDetails(providerId: string): Promise<ExternalSongDetails | null> {
+    const song = await musicBrainzProvider.getDetails(providerId)
+    if (!song) return null
+    return {
+      id: song.providerId,
+      provider: song.provider,
+      title: song.title,
+      artist: song.artist,
+      attributionUrl: song.url,
+    }
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +144,20 @@ export const lrclibProvider: MusicProvider = {
         duration: item.duration ?? undefined,
         album: item.albumName ?? undefined,
       },
+    }
+  },
+
+  async getSongDetails(providerId: string): Promise<ExternalSongDetails | null> {
+    const res = await fetch(`${LRCLIB_BASE}/get/${providerId}`)
+    if (!res.ok) return null
+    const item = await res.json()
+    return {
+      id: String(item.id),
+      provider: 'LRCLIB',
+      title: item.trackName,
+      artist: item.artistName ?? undefined,
+      lyrics: item.plainLyrics ?? undefined,
+      attributionUrl: `https://lrclib.net/api/get/${item.id}`,
     }
   },
 }
