@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Play, Pause } from '@phosphor-icons/react'
 import { audioEngine } from '@/lib/audioSynthesis'
 import { cn } from '@/lib/utils'
+import { usePracticeSession } from '@/hooks/usePracticeSession'
 
 type Subdivision = 'quarters' | 'eighths' | 'triplets'
 
@@ -44,6 +45,8 @@ export function Metronome({ tempo: initialTempo = 120, timeSignature = '4/4', vo
   const [beat, setBeat] = useState(0)
   const tapTimesRef = useRef<number[]>([])
 
+  const practiceSession = usePracticeSession('metronome')
+
   // Mutable refs for the scheduler
   const tempoRef = useRef(tempo)
   const volumeRef = useRef(volume)
@@ -64,7 +67,15 @@ export function Metronome({ tempo: initialTempo = 120, timeSignature = '4/4', vo
   }
 
   const togglePlay = () => {
-    setIsPlaying(prev => !prev)
+    setIsPlaying(prev => {
+      const next = !prev
+      if (next) {
+        practiceSession.start()
+      } else {
+        practiceSession.stop()
+      }
+      return next
+    })
   }
 
   const tapTempo = useCallback(() => {

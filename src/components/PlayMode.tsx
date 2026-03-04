@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import { useAutoscroll } from '@/hooks/useAutoscroll'
 import { PracticeLoop } from '@/components/PracticeLoop'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { usePracticeSession } from '@/hooks/usePracticeSession'
 
 interface PlayModeProps {
   song: Song
@@ -133,6 +134,14 @@ export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }
   const [fontSize, setFontSize] = useState<number>(settings?.fontSize ?? 16)
   // Left-handed mode from settings
   const leftHanded = settings?.leftHandedMode ?? false
+
+  const practiceSession = usePracticeSession('play', { songId: song.id })
+
+  // Start session on mount
+  useEffect(() => {
+    practiceSession.start()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const containerRef = useAutoscroll(playing, speed, {
     pauseAtSections: true,
