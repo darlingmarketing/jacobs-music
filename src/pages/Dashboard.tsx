@@ -181,7 +181,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold truncate">{recording.title}</h3>
                         {recording.notes && (
-                          <p className="text-sm text-muted-foreground truncate">{recording.notes}</p>
+                          <p className="prose prose-sm dark:prose-invert text-muted-foreground truncate">{recording.notes}</p>
                         )}
                         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                           <span>{formatDuration(recording.durationMs)}</span>

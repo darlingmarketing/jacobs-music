@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Heading > matches snapshot for level 1 1`] = `"<h1 class="text-3xl font-bold leading-heading tracking-tight">Main Title</h1>"`;
+
+exports[`Heading > matches snapshot for level 2 1`] = `"<h2 class="text-2xl font-semibold leading-heading tracking-tight">Section Title</h2>"`;
+
+exports[`Text > matches snapshot for default props 1`] = `"<p class="text-body leading-body">Hello world</p>"`;
+
+exports[`Text > matches snapshot for muted body text 1`] = `"<p class="text-lg leading-body text-muted-foreground">Secondary info</p>"`;

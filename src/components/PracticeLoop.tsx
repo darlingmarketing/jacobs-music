@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
@@ -322,20 +323,42 @@ export function PracticeLoop({
       {isLooping && (
         <div className="flex gap-1">
           {Array.from({ length: beatsPerMeasure }).map((_, i) => (
-            <div
+            <motion.div
               key={i}
               className={cn(
-                'flex-1 h-3 rounded transition-all duration-75',
+                'flex-1 h-3 rounded',
                 currentBeat === i
                   ? i === 0 && accentDownbeat
                     ? 'bg-primary'
                     : 'bg-accent'
                   : 'bg-secondary'
               )}
+              animate={currentBeat === i ? { scaleY: 1.6, opacity: 1 } : { scaleY: 1, opacity: 0.5 }}
+              transition={{ duration: 0.075 }}
             />
           ))}
         </div>
       )}
+
+      {/* Animated count-in overlay */}
+      <AnimatePresence>
+        {isCountingIn && currentBeat !== null && (
+          <motion.div
+            key={currentBeat}
+            className="flex items-center justify-center"
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.4, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <motion.span
+              className="text-4xl font-bold text-yellow-500 tabular-nums"
+            >
+              {currentBeat + 1}
+            </motion.span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Start / Stop */}
       <Button

@@ -1,4 +1,5 @@
 import fs from "fs";
+import typography from "@tailwindcss/typography";
 
 /** @type {import('tailwindcss').Config} */
 
@@ -155,4 +156,5 @@ const defaultTheme = {
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: { ...defaultTheme, ...theme },
+  plugins: [typography],
 };
