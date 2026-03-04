@@ -1,5 +1,6 @@
 import { Chord, ChordVoicing } from '@/types'
 import { FretboardDiagram } from '@/components/FretboardDiagramNew'
+import { Fretboard3D } from '@/components/fretboard/Fretboard3D'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { chordVoicingDifficulty } from '@/lib/music/chordDifficulty'
 interface ChordCardProps {
   chord: Chord
   leftHanded?: boolean
+  use3D?: boolean
   difficultyFilter?: 'easy' | 'medium' | 'advanced'
 }
 
@@ -24,7 +26,7 @@ function getVoicingDifficulty(v: ChordVoicing) {
   return chordVoicingDifficulty(v)
 }
 
-export function ChordCard({ chord, leftHanded = false, difficultyFilter }: ChordCardProps) {
+export function ChordCard({ chord, leftHanded = false, use3D = false, difficultyFilter }: ChordCardProps) {
   const visibleVoicings = difficultyFilter
     ? chord.voicings.filter(v => getVoicingDifficulty(v) === difficultyFilter)
     : chord.voicings
@@ -48,7 +50,11 @@ export function ChordCard({ chord, leftHanded = false, difficultyFilter }: Chord
             const difficulty = getVoicingDifficulty(voicing)
             return (
               <div key={voicing.id} className="flex flex-col items-center gap-2 flex-shrink-0">
-                <FretboardDiagram voicing={voicing} leftHanded={leftHanded} />
+                {use3D ? (
+                  <Fretboard3D voicing={voicing} leftHanded={leftHanded} />
+                ) : (
+                  <FretboardDiagram voicing={voicing} leftHanded={leftHanded} />
+                )}
                 <div className="flex items-center gap-1 flex-wrap justify-center">
                   {voicing.tags?.map(t => (
                     <Badge key={t} variant="outline" className="text-xs capitalize">
