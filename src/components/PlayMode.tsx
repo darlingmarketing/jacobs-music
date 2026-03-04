@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,7 @@ import {
   ArrowsCounterClockwise,
   TextAa,
   Guitar,
+  MusicNotes,
 } from '@phosphor-icons/react'
 import type { Song, UserSettings } from '@/types'
 import { transposeChord } from '@/lib/chordParser'
@@ -21,6 +22,7 @@ import { useAutoscroll } from '@/hooks/useAutoscroll'
 import { PracticeLoop } from '@/components/PracticeLoop'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { usePracticeSession } from '@/hooks/usePracticeSession'
+import { suggestNextChords } from '@/lib/music/progressionSuggest'
 
 interface PlayModeProps {
   song: Song
@@ -130,6 +132,7 @@ export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }
   const [activeLine, setActiveLine] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const [showPracticeLoop, setShowPracticeLoop] = useState(false)
+  const [showChordSuggest, setShowChordSuggest] = useState(false)
   // Font size: use settings.fontSize if provided (min 12, max 24), default 16
   const [fontSize, setFontSize] = useState<number>(settings?.fontSize ?? 16)
   // Left-handed mode from settings
@@ -152,6 +155,11 @@ export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }
 
   const transposedKey = song.key ? transposeChord(song.key, semitones) : null
   const capoSuggestions = getCapoSuggestions(semitones, song.key)
+
+  const chordSuggestions = useMemo(
+    () => (transposedKey ? suggestNextChords(transposedKey) : []),
+    [transposedKey],
+  )
 
   const handleLineClick = useCallback((lineId: string) => {
     setActiveLine(prev => (prev === lineId ? null : lineId))
@@ -217,6 +225,19 @@ export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }
             <Guitar size={16} />
             Practice
           </Button>
+
+          {transposedKey && (
+            <Button
+              size="sm"
+              variant={showChordSuggest ? 'secondary' : 'outline'}
+              onClick={() => setShowChordSuggest(v => !v)}
+              className="gap-1 text-gray-300 border-gray-700"
+              aria-label="Toggle chord suggestions panel"
+            >
+              <MusicNotes size={16} />
+              Suggest
+            </Button>
+          )}
         </div>
 
         {/* Scroll mode + speed controls */}
@@ -396,6 +417,32 @@ export function PlayMode({ song, settings, onExit, onNextSong, setlistPosition }
             activeSectionId={activeSectionId}
             onSectionChange={id => setActiveSectionId(id)}
           />
+        </div>
+      )}
+
+      {/* Chord Suggestions panel */}
+      {showChordSuggest && transposedKey && chordSuggestions.length > 0 && (
+        <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3">
+          <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wider">
+            Diatonic chords — {transposedKey}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {chordSuggestions.map(s => (
+              <Badge
+                key={s.chord}
+                variant="outline"
+                className={cn(
+                  'cursor-default border-gray-600 text-sm font-mono',
+                  s.category === 'cadence'
+                    ? 'bg-primary/10 text-primary border-primary/40'
+                    : 'text-gray-300',
+                )}
+                title={s.category === 'cadence' ? 'Common in progressions' : 'Diatonic chord'}
+              >
+                {s.label}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 

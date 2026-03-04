@@ -3,11 +3,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Metronome } from '@/components/Metronome'
 import { Tuner } from '@/components/Tuner'
 import { ChordChangeTrainer } from '@/components/ChordChangeTrainer'
+import { ScaleExplorer } from '@/components/ScaleExplorer'
 import { Info } from '@phosphor-icons/react'
 
 export function Tools() {
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-6">
       <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Tools</h1>
 
       <Tabs defaultValue="metronome">
@@ -20,6 +21,9 @@ export function Tools() {
           </TabsTrigger>
           <TabsTrigger value="trainer" className="flex-1">
             Trainer
+          </TabsTrigger>
+          <TabsTrigger value="scales" className="flex-1">
+            Scales
           </TabsTrigger>
         </TabsList>
 
@@ -71,6 +75,10 @@ export function Tools() {
             <span>Pick chords and practice switching on the beat.</span>
           </div>
           <ChordChangeTrainer />
+        </TabsContent>
+
+        <TabsContent value="scales" className="mt-4">
+          <ScaleExplorer />
         </TabsContent>
       </Tabs>
     </div>
