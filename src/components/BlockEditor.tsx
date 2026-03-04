@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import type { Block, BlockType } from '@/types'
+import type { Block, BlockType, AudioRecording } from '@/types'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { SlashCommandMenu } from '@/components/SlashCommandMenu'
 import type { SlashCommand } from '@/components/SlashCommandMenu'
 import { parseLyricsWithChords } from '@/lib/chordParser'
 import { transposeChord } from '@/lib/chordParser'
+import { AudioRecorder } from '@/components/AudioRecorder'
 import { cn } from '@/lib/utils'
 
 interface BlockEditorProps {
@@ -85,6 +86,14 @@ function BlockPreview({ block, semitones = 0 }: { block: Block; semitones?: numb
     return (
       <div className="italic text-muted-foreground border-l-2 border-muted pl-3">
         {content}
+      </div>
+    )
+  }
+
+  if (block.type === 'audio') {
+    return (
+      <div className="text-sm text-muted-foreground italic">
+        🎙 Audio memo{content ? `: ${content}` : ''}
       </div>
     )
   }
@@ -189,6 +198,12 @@ export function BlockEditor({ block, semitones = 0, onChange, onDelete, onConver
           <div className="py-2">
             <hr className="border-border" />
           </div>
+        ) : block.type === 'audio' ? (
+          <AudioRecorder
+            onSave={(recording: AudioRecording) => {
+              onChange({ content: recording.title, audioRecordingId: recording.id })
+            }}
+          />
         ) : isPreview ? (
           <div className="p-2 min-h-[4rem]">
             <BlockPreview block={block} semitones={semitones} />
