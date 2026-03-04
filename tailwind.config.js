@@ -23,6 +23,17 @@ const defaultTheme = {
       fine: { raw: "(pointer: fine)" },
       pwa: { raw: "(display-mode: standalone)" },
     },
+    fontSize: {
+      'body': '0.95rem',
+      'base': '1rem',
+      'lg': '1.125rem',
+      'xl': '1.25rem',
+      '2xl': '1.5rem',
+    },
+    lineHeight: {
+      'body': '1.6',
+      'heading': '1.3',
+    },
     colors: {
       neutral: {
         1: "var(--color-neutral-1)",

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { House, MusicNotes, BookBookmark, MagnifyingGlass, Guitar, Wrench, Waveform, WaveformSlash, Compass, ChartBar } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -14,6 +13,7 @@ import { Transcribe } from '@/pages/Transcribe'
 import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
 import { PlayMode } from '@/components/PlayMode'
 import { Progress } from '@/pages/Progress'
+import { BottomNav, navItems } from '@/components/nav/BottomNav'
 import type { Song, Setlist } from '@/types'
 
 type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress'
@@ -110,45 +110,13 @@ function App() {
     }
   }
 
-  const navItems = [
-    { id: 'dashboard' as const, icon: House, label: 'Home' },
-    { id: 'songs' as const, icon: MusicNotes, label: 'Songs' },
-    { id: 'library' as const, icon: BookBookmark, label: 'Library' },
-    { id: 'discover' as const, icon: Compass, label: 'Discover' },
-    { id: 'audio' as const, icon: Waveform, label: 'Audio' },
-    { id: 'transcribe' as const, icon: WaveformSlash, label: 'Transcribe' },
-    { id: 'chords' as const, icon: Guitar, label: 'Chords' },
-    { id: 'tools' as const, icon: Wrench, label: 'Tools' },
-    { id: 'progress' as const, icon: ChartBar, label: 'Progress' },
-  ]
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 pb-20 md:pb-6">
         {renderPage()}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border md:hidden">
-        <div className="flex justify-around items-center h-16">
-          {navItems.map(item => {
-            const Icon = item.icon
-            const isActive = state.currentPage === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => navigateTo(item.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 px-3 py-2 transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Icon size={24} weight={isActive ? "fill" : "regular"} />
-                <span className="text-xs">{item.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
+      <BottomNav currentPage={state.currentPage} onNavigate={navigateTo} />
 
       <nav className="hidden md:block fixed top-0 left-0 right-0 bg-card border-b border-border z-10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
