@@ -42,6 +42,11 @@ class AudioEngine {
     osc.stop(startTime + duration)
   }
 
+  playFrequency(frequency: number, duration = 1.5): void {
+    const ctx = this.getContext()
+    this.playNote(frequency, ctx.currentTime, duration)
+  }
+
   playMetronomeClick(isAccent: boolean = false, volume: number = 0.5): void {
     const ctx = this.getContext()
     const now = ctx.currentTime

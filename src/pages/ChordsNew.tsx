@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { ChordCard } from '@/components/ChordCard'
 import { CHORD_DATABASE } from '@/lib/chordDatabaseNew'
 import { MagnifyingGlass } from '@phosphor-icons/react'
+import { scoreVoicing, difficultyTier } from '@/lib/music/chordDifficulty'
+import type { ChordVoicing } from '@/types'
 
 const CHORD_TYPES = [
   { value: 'major', label: 'Major' },
@@ -16,14 +18,35 @@ const CHORD_TYPES = [
   { value: 'minor seventh', label: 'Minor 7th' },
 ]
 
+const DIFFICULTY_OPTIONS = [
+  { value: 'all', label: 'All levels' },
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'advanced', label: 'Advanced' },
+]
+
+function voicingDifficulty(v: ChordVoicing): 'easy' | 'medium' | 'advanced' {
+  const score = scoreVoicing({
+    frets: v.frets as number[],
+    fingers: v.fingers?.map(f => f ?? 0),
+    barre: v.tags?.includes('barre')
+      ? { fret: 1, fromString: 0, toString: 5 }
+      : undefined,
+  })
+  return difficultyTier(score)
+}
+
 export function ChordsNew() {
   const [query, setQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
   const [leftHanded, setLeftHanded] = useKV<boolean>('leftHandedMode', false)
 
   const filtered = CHORD_DATABASE.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) &&
-    (!selectedType || c.tags?.includes(selectedType))
+    (!selectedType || c.tags?.includes(selectedType)) &&
+    (selectedDifficulty === 'all' ||
+      c.voicings.some(v => voicingDifficulty(v) === selectedDifficulty))
   )
 
   return (
@@ -72,12 +95,33 @@ export function ChordsNew() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select
+          value={selectedDifficulty}
+          onValueChange={setSelectedDifficulty}
+        >
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="All levels" />
+          </SelectTrigger>
+          <SelectContent>
+            {DIFFICULTY_OPTIONS.map(d => (
+              <SelectItem key={d.value} value={d.value}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(chord => (
-            <ChordCard key={chord.id} chord={chord} leftHanded={leftHanded ?? false} />
+            <ChordCard
+              key={chord.id}
+              chord={chord}
+              leftHanded={leftHanded ?? false}
+              difficultyFilter={selectedDifficulty !== 'all' ? selectedDifficulty as 'easy' | 'medium' | 'advanced' : undefined}
+            />
           ))}
         </div>
       ) : (
