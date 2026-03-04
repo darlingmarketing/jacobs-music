@@ -8,6 +8,26 @@ export interface AutoscrollOptions {
   sectionPausePx?: number
   /** Duration in milliseconds to pause at each section boundary. Default 1500. */
   sectionPauseDurationMs?: number
+  /** Autoscroll mode: 'manual' uses speed (px/sec), 'bpm' derives speed from tempo. */
+  mode?: 'manual' | 'bpm'
+  /** Song tempo in BPM – used in 'bpm' mode. */
+  tempoBpm?: number
+  /** Pixels to scroll per beat in 'bpm' mode. Default 40. */
+  pxPerBeat?: number
+}
+
+/** Resolve effective px/sec given the current options. */
+function resolveSpeed(
+  manualSpeed: number,
+  mode: 'manual' | 'bpm',
+  tempoBpm: number,
+  pxPerBeat: number
+): number {
+  if (mode === 'bpm' && tempoBpm > 0) {
+    // beats/sec × px/beat = px/sec
+    return (tempoBpm / 60) * pxPerBeat
+  }
+  return manualSpeed
 }
 
 /**
@@ -16,6 +36,8 @@ export interface AutoscrollOptions {
  * Supports:
  *  - Pause / resume at section boundaries (elements with `data-section` attribute)
  *  - Dynamic speed changes without restarting the animation loop
+ *  - BPM-based speed mode
+ *  - Screen Wake Lock (keeps screen on while scrolling on mobile)
  */
 export function useAutoscroll(
   active: boolean,
@@ -24,11 +46,19 @@ export function useAutoscroll(
 ): RefObject<HTMLDivElement> {
   const containerRef = useRef<HTMLDivElement>(null)
   const speedRef = useRef(speed)
+  const modeRef = useRef(options?.mode ?? 'manual')
+  const tempoBpmRef = useRef(options?.tempoBpm ?? 120)
+  const pxPerBeatRef = useRef(options?.pxPerBeat ?? 40)
 
-  // Keep speedRef current so speed changes take effect without restarting the loop
+  // Keep refs current so changes take effect without restarting the loop
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
+  useEffect(() => {
+    modeRef.current = options?.mode ?? 'manual'
+    tempoBpmRef.current = options?.tempoBpm ?? 120
+    pxPerBeatRef.current = options?.pxPerBeat ?? 40
+  }, [options?.mode, options?.tempoBpm, options?.pxPerBeat])
 
   const pauseAtSections = options?.pauseAtSections ?? false
   const pausePx = options?.sectionPausePx ?? 10
@@ -47,6 +77,23 @@ export function useAutoscroll(
     const sections = el.querySelectorAll<HTMLElement>('[data-section]')
     return Array.from(sections).map(s => s.offsetTop)
   }, [])
+
+  // Screen Wake Lock: prevent screen from sleeping while scrolling
+  useEffect(() => {
+    if (!active) return
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return
+
+    let wakeLock: WakeLockSentinel | null = null
+    const wakeLockNav = navigator as Navigator & { wakeLock: WakeLockType }
+    wakeLockNav.wakeLock
+      .request('screen')
+      .then(wl => { wakeLock = wl })
+      .catch(() => { /* wake lock unavailable – ignore */ })
+
+    return () => {
+      wakeLock?.release().catch(() => {})
+    }
+  }, [active])
 
   useEffect(() => {
     if (!active) return
@@ -72,7 +119,13 @@ export function useAutoscroll(
 
       if (lastTimestamp !== null) {
         const deltaMs = timestamp - lastTimestamp
-        el.scrollTop += (speedRef.current * deltaMs) / 1000
+        const effectiveSpeed = resolveSpeed(
+          speedRef.current,
+          modeRef.current,
+          tempoBpmRef.current,
+          pxPerBeatRef.current
+        )
+        el.scrollTop += (effectiveSpeed * deltaMs) / 1000
 
         if (pauseAtSectionsRef.current) {
           const boundaries = getSectionBoundaries(el)
@@ -96,4 +149,12 @@ export function useAutoscroll(
   }, [active, getSectionBoundaries])
 
   return containerRef as RefObject<HTMLDivElement>
+}
+
+// Minimal type shim for WakeLock API
+interface WakeLockSentinel {
+  release(): Promise<void>
+}
+interface WakeLockType {
+  request(type: 'screen'): Promise<WakeLockSentinel>
 }
