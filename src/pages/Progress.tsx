@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react'
 import { useKV } from '@github/spark/hooks'
+import { useQuery } from '@tanstack/react-query'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Timer, Fire, TrendUp, MusicNotes, ArrowsClockwise, Metronome, Star } from '@phosphor-icons/react'
-import { getSummary, listSessions } from '@/lib/practice/storage'
-import type { PracticeSummary, PracticeSession } from '@/lib/practice/types'
+import { getSummary, listSessions } from '@/lib/practice/repo'
+import { getDailyMinutes, getBpmHistory } from '@/lib/practice/repo'
+import type { PracticeSession } from '@/lib/practice/types'
 import type { Song } from '@/types'
 import { cn } from '@/lib/utils'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+} from 'recharts'
 
 const MODE_LABELS: Record<PracticeSession['mode'], string> = {
   play: 'Play',
@@ -37,20 +49,6 @@ function fmtMinutes(sec: number): string {
   return `${Math.round(sec / 60)}m`
 }
 
-function todaySeconds(sessions: PracticeSession[]): number {
-  const today = new Date().toISOString().slice(0, 10)
-  return sessions
-    .filter((s) => s.startedAt.startsWith(today))
-    .reduce((acc, s) => acc + (s.durationSec ?? 0), 0)
-}
-
-function last7dSeconds(sessions: PracticeSession[]): number {
-  const since = new Date(Date.now() - 7 * 86400000).toISOString()
-  return sessions
-    .filter((s) => s.startedAt >= since)
-    .reduce((acc, s) => acc + (s.durationSec ?? 0), 0)
-}
-
 interface KPICardProps {
   icon: React.ReactNode
   label: string
@@ -74,22 +72,41 @@ function KPICard({ icon, label, value, sub, accent }: KPICardProps) {
 
 export function Progress() {
   const [songs] = useKV<Song[]>('songs', [])
-  const [summary, setSummary] = useState<PracticeSummary | null>(null)
-  const [sessions, setSessions] = useState<PracticeSession[]>([])
 
-  useEffect(() => {
-    getSummary().then(setSummary).catch(() => {})
-    listSessions().then((all) => {
-      const sorted = [...all].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-      setSessions(sorted.slice(0, 20))
-    }).catch(() => {})
-  }, [])
+  const { data: summary = null } = useQuery({
+    queryKey: ['practice-summary'],
+    queryFn: getSummary,
+  })
+
+  const { data: allSessions = [] } = useQuery({
+    queryKey: ['practice-sessions'],
+    queryFn: () =>
+      listSessions().then((all) =>
+        [...all].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 20),
+      ),
+  })
+
+  const { data: dailyMinutes = [] } = useQuery({
+    queryKey: ['practice-daily-minutes'],
+    queryFn: () => getDailyMinutes(14),
+  })
+
+  const { data: bpmHistory = [] } = useQuery({
+    queryKey: ['practice-bpm-history'],
+    queryFn: getBpmHistory,
+  })
 
   const allSongs = songs ?? []
-  const allSessions = sessions
 
-  const todaySec = todaySeconds(allSessions)
-  const weekSec = last7dSeconds(allSessions)
+  const today = new Date().toISOString().slice(0, 10)
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+
+  const todaySec = allSessions
+    .filter((s) => s.startedAt.startsWith(today))
+    .reduce((acc, s) => acc + (s.durationSec ?? 0), 0)
+  const weekSec = allSessions
+    .filter((s) => s.startedAt >= weekAgo)
+    .reduce((acc, s) => acc + (s.durationSec ?? 0), 0)
 
   const hasSessions = allSessions.length > 0
 
@@ -135,6 +152,64 @@ export function Progress() {
           />
         )}
       </div>
+
+      {/* Daily practice bar chart */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Daily Practice (last 14 days)</h2>
+        {dailyMinutes.every((d) => d.minutes === 0) ? (
+          <Card className="p-6 text-center text-muted-foreground text-sm">
+            No practice data yet. Start a session to see your daily chart.
+          </Card>
+        ) : (
+          <Card className="p-4">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={dailyMinutes} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v: string) => v.slice(5)}
+                  tick={{ fontSize: 10 }}
+                  interval={2}
+                />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  formatter={(v: number) => [`${v}m`, 'Practice']}
+                  labelFormatter={(l: string) => l}
+                />
+                <Bar dataKey="minutes" fill="var(--color-primary, #6366f1)" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
+      </div>
+
+      {/* BPM progress line chart */}
+      {bpmHistory.length > 1 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">BPM Progress</h2>
+          <Card className="p-4">
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart data={bpmHistory} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v: string) => v.slice(5)}
+                  tick={{ fontSize: 10 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: number) => [`${v} BPM`, 'BPM']} />
+                <Line
+                  type="monotone"
+                  dataKey="bpm"
+                  stroke="var(--color-primary, #6366f1)"
+                  dot={false}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      )}
 
       {/* Recent sessions */}
       <div className="space-y-3">

@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { ChordCard } from '@/components/ChordCard'
 import { CHORD_DATABASE } from '@/lib/chordDatabaseNew'
-import { MagnifyingGlass } from '@phosphor-icons/react'
+import { MagnifyingGlass, Cube } from '@phosphor-icons/react'
 import { chordVoicingDifficulty } from '@/lib/music/chordDifficulty'
 import type { ChordVoicing } from '@/types'
 
@@ -34,6 +34,7 @@ export function ChordsNew() {
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
   const [leftHanded, setLeftHanded] = useKV<boolean>('leftHandedMode', false)
+  const [use3D, setUse3D] = useKV<boolean>('chordDict:use3D', false)
 
   const filtered = CHORD_DATABASE.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -46,15 +47,28 @@ export function ChordsNew() {
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Chord Dictionary</h1>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="left-handed-toggle"
-            checked={leftHanded ?? false}
-            onCheckedChange={setLeftHanded}
-          />
-          <Label htmlFor="left-handed-toggle" className="text-sm cursor-pointer">
-            Left-handed
-          </Label>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="left-handed-toggle"
+              checked={leftHanded ?? false}
+              onCheckedChange={setLeftHanded}
+            />
+            <Label htmlFor="left-handed-toggle" className="text-sm cursor-pointer">
+              Left-handed
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="view-3d-toggle"
+              checked={use3D ?? false}
+              onCheckedChange={setUse3D}
+            />
+            <Label htmlFor="view-3d-toggle" className="text-sm cursor-pointer flex items-center gap-1">
+              <Cube size={14} />
+              3D view
+            </Label>
+          </div>
         </div>
       </div>
 
@@ -113,6 +127,7 @@ export function ChordsNew() {
               key={chord.id}
               chord={chord}
               leftHanded={leftHanded ?? false}
+              use3D={use3D ?? false}
               difficultyFilter={selectedDifficulty !== 'all' ? selectedDifficulty as 'easy' | 'medium' | 'advanced' : undefined}
             />
           ))}
