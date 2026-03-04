@@ -100,3 +100,37 @@
 .font-display {
   font-family: 'Outfit', sans-serif;
 }
+
+/* ── Dyslexia-friendly font ──────────────────────────────────────── */
+.font-dyslexia body,
+.font-dyslexia {
+  font-family: 'OpenDyslexic', sans-serif !important;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ── High contrast ───────────────────────────────────────────────── */
+.high-contrast {
+  --foreground: oklch(0.0 0.0 0);
+  --background: oklch(1.0 0.0 0);
+  --border: oklch(0.0 0.0 0);
+  --muted-foreground: oklch(0.15 0.0 0);
+}
+.high-contrast.dark {
+  --foreground: oklch(1.0 0.0 0);
+  --background: oklch(0.0 0.0 0);
+  --border: oklch(1.0 0.0 0);
+  --muted-foreground: oklch(0.85 0.0 0);
+}
+
+/* ── Font size ───────────────────────────────────────────────────── */
+html {
+  font-size: var(--font-size-base, 16px);
+}

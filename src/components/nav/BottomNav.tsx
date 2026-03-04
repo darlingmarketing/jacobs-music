@@ -1,7 +1,7 @@
-import { House, MusicNotes, BookBookmark, Compass, Waveform, WaveformSlash, Guitar, Wrench, ChartBar } from '@phosphor-icons/react'
+import { House, MusicNotes, BookBookmark, Compass, Waveform, WaveformSlash, Guitar, Wrench, ChartBar, GearSix } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
-export type NavPage = 'dashboard' | 'songs' | 'library' | 'discover' | 'audio' | 'transcribe' | 'chords' | 'tools' | 'progress'
+export type NavPage = 'dashboard' | 'songs' | 'library' | 'discover' | 'audio' | 'transcribe' | 'chords' | 'tools' | 'progress' | 'settings'
 
 export const navItems: { id: NavPage; icon: React.ComponentType<{ size: number; weight: 'fill' | 'regular' }>; label: string }[] = [
   { id: 'dashboard', icon: House, label: 'Home' },
@@ -13,6 +13,7 @@ export const navItems: { id: NavPage; icon: React.ComponentType<{ size: number; 
   { id: 'chords', icon: Guitar, label: 'Chords' },
   { id: 'tools', icon: Wrench, label: 'Tools' },
   { id: 'progress', icon: ChartBar, label: 'Progress' },
+  { id: 'settings', icon: GearSix, label: 'Settings' },
 ]
 
 interface BottomNavProps {

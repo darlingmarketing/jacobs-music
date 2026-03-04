@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useKV } from '@github/spark/hooks'
+import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 import { Dashboard } from '@/pages/Dashboard'
 import { MySongs } from '@/pages/MySongs'
@@ -14,10 +15,13 @@ import { Transcribe } from '@/pages/Transcribe'
 import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
 import { PlayMode } from '@/components/PlayMode'
 import { Progress } from '@/pages/Progress'
+import { Settings } from '@/pages/Settings'
 import { BottomNav, navItems } from '@/components/nav/BottomNav'
+import { useSettings } from '@/hooks/useSettings'
+import { registerKeyboardShortcuts, registerShortcut } from '@/lib/keyboardShortcuts'
 import type { Song, Setlist } from '@/types'
 
-type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress'
+type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress' | 'settings'
 
 export interface AppState {
   currentPage: Page
@@ -35,9 +39,37 @@ function App() {
   const [songs] = useKV<Song[]>('songs', [])
   const [setlists] = useKV<Setlist[]>('setlists', [])
 
+  // Apply persisted settings (theme, font size, accessibility, etc.)
+  useSettings()
+
   const navigateTo = (page: Page, songId?: string, transcriptionId?: string) => {
     setState({ currentPage: page, editingSongId: songId, transcriptionId })
   }
+
+  // Register global keyboard shortcuts
+  useEffect(() => {
+    const cleanupListener = registerKeyboardShortcuts()
+    const cleanupSave = registerShortcut('save-song', {
+      description: 'Save current song',
+      combo: 'ctrl+s',
+      handler: e => {
+        // SongEditor handles its own save; prevent browser default
+        e.preventDefault()
+      },
+    })
+    const cleanupHelp = registerShortcut('open-help', {
+      description: 'Open keyboard shortcut help',
+      combo: '?',
+      handler: () => {
+        // Future: open help overlay
+      },
+    })
+    return () => {
+      cleanupListener()
+      cleanupSave()
+      cleanupHelp()
+    }
+  }, [])
 
   const launchSetlist = (setlistId: string, index: number) => {
     const setlist = (setlists ?? []).find(s => s.id === setlistId)
@@ -106,6 +138,8 @@ function App() {
         return <SongEditor songId={state.editingSongId} onNavigate={navigateTo} />
       case 'progress':
         return <Progress />
+      case 'settings':
+        return <Settings />
       default:
         return <Dashboard onNavigate={navigateTo} />
     }
@@ -157,6 +191,7 @@ function App() {
       </nav>
 
       <div className="hidden md:block h-16" />
+      <Toaster />
     </div>
   )
 }
