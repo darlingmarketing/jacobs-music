@@ -1,0 +1,19 @@
+{
+  "name": "Jacobs Music",
+  "short_name": "Jacobs Music",
+  "description": "Intelligent songwriting, chord detection, and rehearsal tool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "categories": ["music", "entertainment", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

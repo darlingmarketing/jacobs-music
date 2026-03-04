@@ -12,21 +12,34 @@ import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
 import { AudioIdeas } from '@/pages/AudioIdeas'
 import { Transcribe } from '@/pages/Transcribe'
 import { PlayMode } from '@/components/PlayMode'
-import type { Song } from '@/types'
+import type { Song, Setlist } from '@/types'
 
 type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'play'
 
 export interface AppState {
   currentPage: Page
   editingSongId?: string
+  /** Setlist being played (for auto-advance) */
+  setlistId?: string
+  /** Current position within the setlist */
+  setlistIndex?: number
 }
 
 function App() {
   const [state, setState] = useState<AppState>({ currentPage: 'dashboard' })
   const [songs] = useKV<Song[]>('songs', [])
+  const [setlists] = useKV<Setlist[]>('setlists', [])
 
   const navigateTo = (page: Page, songId?: string) => {
     setState({ currentPage: page, editingSongId: songId })
+  }
+
+  const launchSetlist = (setlistId: string, index: number) => {
+    const setlist = (setlists ?? []).find(s => s.id === setlistId)
+    if (!setlist || setlist.songIds.length === 0) return
+    const songId = setlist.songIds[index]
+    if (!songId) return
+    setState({ currentPage: 'play', editingSongId: songId, setlistId, setlistIndex: index })
   }
 
   const renderPage = () => {
@@ -34,10 +47,28 @@ function App() {
     if (state.currentPage === 'play') {
       const song = (songs ?? []).find(s => s.id === state.editingSongId)
       if (song) {
+        const activeSetlist = state.setlistId
+          ? (setlists ?? []).find(s => s.id === state.setlistId)
+          : null
+        const currentIndex = state.setlistIndex ?? 0
+        const hasNextSong =
+          !!activeSetlist &&
+          currentIndex < activeSetlist.songIds.length - 1
+
+        const handleNextSong = hasNextSong
+          ? () => launchSetlist(state.setlistId!, currentIndex + 1)
+          : undefined
+
         return (
           <PlayMode
             song={song}
             onExit={() => navigateTo('editor', song.id)}
+            onNextSong={handleNextSong}
+            setlistPosition={
+              activeSetlist
+                ? { current: currentIndex + 1, total: activeSetlist.songIds.length }
+                : undefined
+            }
           />
         )
       }
@@ -51,7 +82,7 @@ function App() {
       case 'songs':
         return <MySongs onNavigate={navigateTo} />
       case 'library':
-        return <Library onNavigate={navigateTo} />
+        return <Library onNavigate={navigateTo} onLaunchSetlist={launchSetlist} />
       case 'discover':
         return <Discover onNavigate={navigateTo} />
       case 'chords':

@@ -18,9 +18,10 @@ import { toast } from 'sonner'
 
 interface LibraryProps {
   onNavigate: (page: AppState['currentPage'], songId?: string) => void
+  onLaunchSetlist?: (setlistId: string, index: number) => void
 }
 
-export function Library({ onNavigate }: LibraryProps) {
+export function Library({ onNavigate, onLaunchSetlist }: LibraryProps) {
   const [songs] = useKV<Song[]>('songs', [])
   const [offlineSongs, setOfflineSongs] = useKV<string[]>('offline-songs', [])
   const { favorites, removeFavorite } = useFavorites()
@@ -152,10 +153,14 @@ export function Library({ onNavigate }: LibraryProps) {
           <SetlistManager
             songs={allSongs}
             onLaunchSetlist={setlist => {
-              const firstSongId = setlist.songIds[0]
-              if (firstSongId) {
-                onNavigate('editor', firstSongId)
-                toast.success(`Launching "${setlist.name}"`)
+              if (onLaunchSetlist && setlist.songIds.length > 0) {
+                onLaunchSetlist(setlist.id, 0)
+              } else {
+                const firstSongId = setlist.songIds[0]
+                if (firstSongId) {
+                  onNavigate('editor', firstSongId)
+                  toast.success(`Launching "${setlist.name}"`)
+                }
               }
             }}
           />

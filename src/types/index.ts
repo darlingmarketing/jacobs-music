@@ -5,7 +5,7 @@ export interface User {
   createdAt: string
 }
 
-export type BlockType = 'lyrics' | 'chords' | 'tab' | 'note' | 'audio' | 'heading' | 'divider'
+export type BlockType = 'lyrics' | 'chords' | 'tab' | 'note' | 'audio' | 'audio_ref' | 'heading' | 'divider'
 
 export interface Block {
   id: string
