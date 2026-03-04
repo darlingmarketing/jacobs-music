@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { noteAtStringFret, intervalName, type NoteName } from "@/lib/music/notes";
+import { noteAtStringFret, noteIndex, intervalName, type NoteName } from "@/lib/music/notes";
 import { audioEngine } from "@/lib/audioSynthesis";
 
 // Open-string base frequencies for standard EADGBE (low E → high e)
@@ -9,10 +9,7 @@ const STANDARD_NOTES: NoteName[] = ["E", "A", "D", "G", "B", "E"];
 
 function openFreq(standardIdx: number, tuningNote: NoteName): number {
   const standardNote = STANDARD_NOTES[standardIdx];
-  const semis =
-    (["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(tuningNote) -
-     ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(standardNote) +
-     12) % 12;
+  const semis = (noteIndex(tuningNote) - noteIndex(standardNote) + 12) % 12;
   // Adjust within ±6 semitones for nearest octave
   const adj = semis > 6 ? semis - 12 : semis;
   return STANDARD_OPEN_FREQS[standardIdx] * Math.pow(2, adj / 12);

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { SpeakerHigh } from '@phosphor-icons/react'
 import { audioEngine } from '@/lib/audioSynthesis'
 import { FavoriteButton } from '@/components/FavoriteButton'
-import { scoreVoicing, difficultyTier } from '@/lib/music/chordDifficulty'
+import { chordVoicingDifficulty } from '@/lib/music/chordDifficulty'
 
 interface ChordCardProps {
   chord: Chord
@@ -21,14 +21,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 }
 
 function getVoicingDifficulty(v: ChordVoicing) {
-  const score = scoreVoicing({
-    frets: v.frets as number[],
-    fingers: v.fingers?.map(f => f ?? 0),
-    barre: v.tags?.includes('barre')
-      ? { fret: 1, fromString: 0, toString: 5 }
-      : undefined,
-  })
-  return difficultyTier(score)
+  return chordVoicingDifficulty(v)
 }
 
 export function ChordCard({ chord, leftHanded = false, difficultyFilter }: ChordCardProps) {

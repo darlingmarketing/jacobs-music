@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Play } from "@phosphor-icons/react";
 import { Fretboard } from "@/components/fretboard/Fretboard";
 import { SCALES, scaleNotes } from "@/lib/music/scales";
-import { normalizeNote, type NoteName } from "@/lib/music/notes";
+import { normalizeNote, noteIndex, type NoteName } from "@/lib/music/notes";
 import { audioEngine } from "@/lib/audioSynthesis";
 
 const NOTE_NAMES: NoteName[] = [
@@ -26,10 +26,7 @@ const STANDARD_OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 const STANDARD_NOTES: NoteName[] = ["E","A","D","G","B","E"];
 
 function openFreqForString(idx: number, note: NoteName): number {
-  const semis =
-    (["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(note) -
-     ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(STANDARD_NOTES[idx]) +
-     12) % 12;
+  const semis = (noteIndex(note) - noteIndex(STANDARD_NOTES[idx]) + 12) % 12;
   const adj = semis > 6 ? semis - 12 : semis;
   return STANDARD_OPEN_FREQS[idx] * Math.pow(2, adj / 12);
 }
@@ -71,12 +68,8 @@ export function ScaleExplorer() {
       // Play ascending on string 0 (low E) for simplicity
       const stringNote = tuning[0] as NoteName;
       const openF = openFreqForString(0, stringNote);
-      // Find the semitone offset: (noteIndex(scaleNote) - noteIndex(stringNote) + 12) % 12
       const scaleNote = notes[scaleIdx];
-      const diff =
-        (["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(scaleNote) -
-         ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].indexOf(stringNote) +
-         24) % 12;
+      const diff = (noteIndex(scaleNote) - noteIndex(stringNote) + 24) % 12;
       return openF * Math.pow(2, diff / 12);
     });
 

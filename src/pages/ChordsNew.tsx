@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { ChordCard } from '@/components/ChordCard'
 import { CHORD_DATABASE } from '@/lib/chordDatabaseNew'
 import { MagnifyingGlass } from '@phosphor-icons/react'
-import { scoreVoicing, difficultyTier } from '@/lib/music/chordDifficulty'
+import { chordVoicingDifficulty } from '@/lib/music/chordDifficulty'
 import type { ChordVoicing } from '@/types'
 
 const CHORD_TYPES = [
@@ -26,14 +26,7 @@ const DIFFICULTY_OPTIONS = [
 ]
 
 function voicingDifficulty(v: ChordVoicing): 'easy' | 'medium' | 'advanced' {
-  const score = scoreVoicing({
-    frets: v.frets as number[],
-    fingers: v.fingers?.map(f => f ?? 0),
-    barre: v.tags?.includes('barre')
-      ? { fret: 1, fromString: 0, toString: 5 }
-      : undefined,
-  })
-  return difficultyTier(score)
+  return chordVoicingDifficulty(v)
 }
 
 export function ChordsNew() {

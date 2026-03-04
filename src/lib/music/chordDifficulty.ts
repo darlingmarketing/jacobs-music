@@ -38,3 +38,23 @@ export function difficultyTier(score: number): "easy" | "medium" | "advanced" {
   if (score <= 7.0) return "medium";
   return "advanced";
 }
+
+/**
+ * Convenience wrapper that scores a `ChordVoicing` (from @/types) directly.
+ * Reads the `barre` tag from `voicing.tags` to apply the barre penalty.
+ */
+export function chordVoicingDifficulty(voicing: {
+  frets: (number | -1)[];
+  fingers?: (number | null)[];
+  tags?: string[];
+}): "easy" | "medium" | "advanced" {
+  return difficultyTier(
+    scoreVoicing({
+      frets: voicing.frets as number[],
+      fingers: voicing.fingers?.map(f => f ?? 0),
+      barre: voicing.tags?.includes("barre")
+        ? { fret: 1, fromString: 0, toString: 5 }
+        : undefined,
+    }),
+  );
+}
