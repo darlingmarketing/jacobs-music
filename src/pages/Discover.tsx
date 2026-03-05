@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MagnifyingGlass, Plus, Clock, MusicNote, ArrowsOut } from '@phosphor-icons/react'
 import { AppState } from '@/App'
-import { searchAllProviders, musicBrainzProvider, lrclibProvider, ultimateGuitarProvider, isUltimateProviderEnabled, type ProviderSong, type MusicProvider, type ExternalSongDetails } from '@/lib/providers'
+import { searchAllProviders, musicBrainzProvider, lrclibProvider, ultimateGuitarProvider, emilsTabsProvider, jDarksProvider, isUltimateProviderEnabled, type ProviderSong, type MusicProvider, type ExternalSongDetails } from '@/lib/providers'
 import type { ExternalSong } from '@/types'
 import { toast } from 'sonner'
 
@@ -21,6 +21,8 @@ const PROVIDERS: { value: string; label: string; provider: MusicProvider | 'all'
   { value: 'all', label: 'All providers', provider: 'all' },
   { value: 'musicbrainz', label: 'MusicBrainz', provider: musicBrainzProvider },
   { value: 'lrclib', label: 'LRCLIB', provider: lrclibProvider },
+  { value: 'emilstabs', label: 'EmilsTabs (Jam/Phish)', provider: emilsTabsProvider },
+  { value: 'jdarks', label: 'JDarks (Dead/Bluegrass)', provider: jDarksProvider },
   ...(isUltimateProviderEnabled()
     ? [{ value: 'ultimateguitar', label: 'Ultimate Guitar (local)', provider: ultimateGuitarProvider as MusicProvider }]
     : []),
@@ -317,38 +319,38 @@ export function Discover({ onNavigate }: DiscoverProps) {
             <DialogTitle>Save to Library</DialogTitle>
           </DialogHeader>
           {savingWith && (() => {
-              const savingKey = `${savingWith.provider}-${savingWith.providerId}`
-              const providerLyrics = loadedDetails[savingKey]?.lyrics
-              return (
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-medium">{savingWith.title}</p>
-                    {savingWith.artist && (
-                      <p className="text-sm text-muted-foreground">{savingWith.artist}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Chords / Lyrics{' '}
-                      <span className="text-muted-foreground font-normal">(optional)</span>
-                    </label>
-                    <Textarea
-                      placeholder="Paste your own chords or lyrics here…"
-                      value={pasteContent}
-                      onChange={e => setPasteContent(e.target.value)}
-                      className="min-h-[120px] font-mono text-sm"
-                    />
-                    {pasteContent && (
-                      <p className="text-xs text-muted-foreground">
-                        {providerLyrics
-                          ? 'Lyrics pre-filled from provider. Edit as needed – stored locally and not shared.'
-                          : 'Your pasted content will be stored locally and is not shared.'}
-                      </p>
-                    )}
-                  </div>
+            const savingKey = `${savingWith.provider}-${savingWith.providerId}`
+            const providerLyrics = loadedDetails[savingKey]?.lyrics
+            return (
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium">{savingWith.title}</p>
+                  {savingWith.artist && (
+                    <p className="text-sm text-muted-foreground">{savingWith.artist}</p>
+                  )}
                 </div>
-              )
-            })()}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Chords / Lyrics{' '}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
+                  </label>
+                  <Textarea
+                    placeholder="Paste your own chords or lyrics here…"
+                    value={pasteContent}
+                    onChange={e => setPasteContent(e.target.value)}
+                    className="min-h-[120px] font-mono text-sm"
+                  />
+                  {pasteContent && (
+                    <p className="text-xs text-muted-foreground">
+                      {providerLyrics
+                        ? 'Lyrics pre-filled from provider. Edit as needed – stored locally and not shared.'
+                        : 'Your pasted content will be stored locally and is not shared.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setSavingWith(null)}>Cancel</Button>
             <Button onClick={confirmSave} className="gap-1">
