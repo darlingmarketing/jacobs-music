@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ChordTimelineEditor } from '@/components/ChordTimelineEditor'
 import { ModelComparisonView } from '@/components/ModelComparisonView'
-import { 
+import {
   WaveformSlash,
   FloppyDisk,
   ArrowsCounterClockwise,
@@ -58,15 +58,15 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   const [lastTxId, setLastTxId] = useState<string | null>(null)
 
   useEffect(() => {
-    listTranscriptions().then(setRecentTranscriptions).catch(() => {})
+    listTranscriptions().then(setRecentTranscriptions).catch(() => { })
   }, [])
-  
+
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressStep, setProgressStep] = useState('')
   const [segments, setSegments] = useState<ChordSegment[]>([])
   const [processingComplete, setProcessingComplete] = useState(false)
-  
+
   const [bpm, setBpm] = useState(120)
   const [timeSig, setTimeSig] = useState('4/4')
   const [conversionMode, setConversionMode] = useState<'bar' | 'sectioned'>('bar')
@@ -76,48 +76,48 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
   const [songDescription, setSongDescription] = useState('')
   const [enableEnsemble, setEnableEnsemble] = useState(true)
   const [showModelComparison, setShowModelComparison] = useState(false)
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workerRef = useRef<Worker | null>(null)
-  
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     const validTypes = ['audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/webm', 'audio/mp3', 'audio/x-m4a']
     if (!validTypes.some(type => file.type === type || file.name.endsWith(`.${type.split('/')[1]}`) || file.name.endsWith('.m4a') || file.name.endsWith('.mp3'))) {
       toast.error('Invalid file type. Please upload WAV, MP3, M4A, OGG, or WebM')
       return
     }
-    
+
     const MAX_SIZE = 50 * 1024 * 1024
     if (file.size > MAX_SIZE) {
       toast.error('File too large. Maximum size is 50MB')
       return
     }
-    
+
     setAudioFile(file)
     const url = URL.createObjectURL(file)
     setAudioUrl(url)
-    
+
     const audio = new Audio(url)
     audio.addEventListener('loadedmetadata', () => {
       setAudioDuration(audio.duration * 1000)
       setSampleRate(44100)
-      
+
       if (audio.duration > 300) {
         toast.error('Audio duration exceeds 5 minutes. Please trim or use a shorter file.')
       }
     })
-    
+
     toast.success(`Loaded: ${file.name}`)
   }
-  
+
   const decodeAudioData = async (file: File): Promise<{ audioData: Float32Array; sampleRate: number }> => {
     const arrayBuffer = await file.arrayBuffer()
     const audioContext = new AudioContext()
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-    
+
     let audioData: Float32Array
     if (audioBuffer.numberOfChannels > 1) {
       const left = audioBuffer.getChannelData(0)
@@ -129,7 +129,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
     } else {
       audioData = audioBuffer.getChannelData(0)
     }
-    
+
     return { audioData, sampleRate: audioBuffer.sampleRate }
   }
 
@@ -150,13 +150,13 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       toast.error(sourceType === 'upload' ? 'Please select an audio file first' : 'Please select a recording')
       return
     }
-    
+
     setIsProcessing(true)
     setProgress(0)
     setProgressStep('Decoding audio...')
     setSegments([])
     setProcessingComplete(false)
-    
+
     const selectedEngine = engines.find(e => e.id === selectedEngineId)
 
     try {
@@ -202,7 +202,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
         source.blob instanceof File ? source.blob : new File([source.blob], source.fileName ?? 'audio')
       )
       setSampleRate(rate)
-      
+
       const params: TranscriptionParams = {
         frameSize: 4096,
         hopSize: 2048,
@@ -212,17 +212,17 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
         confidenceThreshold: 0.1,
         enableEnsemble
       }
-      
+
       if (!workerRef.current) {
         workerRef.current = new Worker(
           new URL('../workers/chordTranscribe.worker.ts', import.meta.url),
           { type: 'module' }
         )
       }
-      
+
       workerRef.current.onmessage = (e: MessageEvent<WorkerMessage>) => {
         const msg = e.data
-        
+
         if (msg.type === 'progress') {
           setProgress(msg.progress || 0)
           setProgressStep(msg.step || '')
@@ -238,25 +238,25 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           toast.error(`Error: ${msg.error}`)
         }
       }
-      
+
       workerRef.current.postMessage({ audioData, sampleRate: rate, params })
-      
+
     } catch (error) {
       setIsProcessing(false)
       toast.error(`Failed to analyze: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
-  
+
   const handleTranspose = (semitones: number) => {
     setSegments(transposeSegments(segments, semitones))
     toast.success(`Transposed ${semitones > 0 ? '+' : ''}${semitones} semitones`)
   }
-  
+
   const handleQuantize = () => {
     setSegments(quantizeSegmentBoundaries(segments, 250))
     toast.success('Quantized segment boundaries')
   }
-  
+
   const handleSimplify = () => {
     setSegments(simplifySegments(segments, 500))
     toast.success('Simplified chord timeline')
@@ -320,13 +320,13 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       toast.error(`Failed to convert: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
-  
+
   const handleCreateSong = async () => {
     if (segments.length === 0) {
       toast.error('No chord segments to convert')
       return
     }
-    
+
     const songData = convertSegmentsToSong(
       segments,
       { bpm, timeSig, mode: conversionMode },
@@ -337,7 +337,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
         description: songDescription
       }
     )
-    
+
     const user = await window.spark.user()
     const newSong: Song = {
       ...songData,
@@ -346,29 +346,32 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
-    
+
     setSongs((currentSongs) => [...(currentSongs || []), newSong])
     toast.success('Song created successfully!')
-    
+
     setTimeout(() => {
       onNavigate('editor', newSong.id)
     }, 500)
   }
-  
+
   const previewChords = segments.length > 0 ? segmentsToBars(segments, bpm, timeSig) : ''
   const isAnalyzeDisabled = isProcessing || (sourceType === 'upload' ? !audioFile : !selectedRecordingId)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-display">Transcribe From Audio</h1>
-        <p className="text-lg text-muted-foreground">
-          Analyse an audio file or saved recording to extract chord segments
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 space-y-12 liquid-glow">
+      <div className="space-y-4 text-center">
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display text-gradient animate-float">
+          Neural Transcription
+        </h1>
+        <p className="text-xl text-muted-foreground/80 max-w-2xl mx-auto">
+          AI-driven chord extraction with professional-grade spectral analysis
         </p>
       </div>
 
       {/* ── Source Selection ─────────────────────────────────── */}
-      <Card className="p-6">
+      {/* ── Source Selection ─────────────────────────────────── */}
+      <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="space-y-4">
           <h3 className="font-semibold font-display">Audio Source</h3>
 
@@ -434,7 +437,8 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
       </Card>
 
       {/* ── Engine Selection + Settings ──────────────────────── */}
-      <Card className="p-6">
+      {/* ── Engine Selection + Settings ──────────────────────── */}
+      <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold font-display">Detection Settings</h3>
@@ -463,7 +467,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
               )}
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="bpm">BPM (Tempo)</Label>
@@ -476,7 +480,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                 max={240}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="timesig">Time Signature</Label>
               <Select value={timeSig} onValueChange={setTimeSig}>
@@ -492,7 +496,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
               </Select>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
             <div className="space-y-1">
               <Label htmlFor="ensemble-mode" className="font-medium">Ensemble AI Models</Label>
@@ -506,7 +510,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
               onCheckedChange={setEnableEnsemble}
             />
           </div>
-          
+
           <Button
             onClick={handleAnalyze}
             disabled={isAnalyzeDisabled}
@@ -516,7 +520,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
             <WaveformSlash size={20} />
             {isProcessing ? 'Analyzing…' : 'Analyze'}
           </Button>
-          
+
           {isProcessing && (
             <div className="space-y-2">
               <Progress value={progress} className="h-2" />
@@ -525,11 +529,11 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           )}
         </div>
       </Card>
-      
+
       {processingComplete && segments.length > 0 && (
         <>
           {/* ── Analysis Results ─────────────────────────────────── */}
-          <Card className="p-6">
+          <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
             <div className="space-y-4">
               <h3 className="font-semibold font-display">Analysis Results</h3>
 
@@ -579,7 +583,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold font-display">Chord Timeline</h3>
@@ -599,7 +603,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                   <Button onClick={handleSimplify} variant="outline" size="sm">Simplify</Button>
                 </div>
               </div>
-              
+
               {showModelComparison ? (
                 <ModelComparisonView segments={segments} />
               ) : (
@@ -614,11 +618,11 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
               )}
             </div>
           </Card>
-          
-          <Card className="p-6">
+
+          <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-400">
             <div className="space-y-4">
               <h3 className="font-semibold font-display">Preview as Song</h3>
-              
+
               <div className="space-y-2">
                 <Label>Conversion Mode</Label>
                 <Select value={conversionMode} onValueChange={(v) => setConversionMode(v as 'bar' | 'sectioned')}>
@@ -631,17 +635,17 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="p-4 bg-muted/50 rounded-md font-mono text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
                 {previewChords || 'No chords detected'}
               </div>
             </div>
           </Card>
-          
-          <Card className="p-6">
+
+          <Card className="p-8 glass-panel animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
             <div className="space-y-4">
               <h3 className="font-semibold">Song Metadata</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Title</Label>
@@ -652,7 +656,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                     placeholder={audioFile?.name || 'Untitled'}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="artist">Artist</Label>
                   <Input
@@ -662,7 +666,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                     placeholder="Artist name"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="key">Key</Label>
                   <Input
@@ -673,7 +677,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="description">Description / Notes</Label>
                 <Textarea
@@ -684,7 +688,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                   rows={3}
                 />
               </div>
-              
+
               <div className="flex gap-2 flex-wrap">
                 <Button onClick={handleConvertToSongDraft} className="flex-1 gap-2" size="lg">
                   <MusicNote size={20} />
@@ -705,14 +709,14 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
                     Open in Timeline
                   </Button>
                 )}
-                <Button 
+                <Button
                   onClick={() => {
                     setSegments([])
                     setProcessingComplete(false)
                     setAudioFile(null)
                     setAudioUrl('')
                     setLastTxId(null)
-                  }} 
+                  }}
                   variant="ghost"
                   size="lg"
                 >
@@ -723,9 +727,9 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
           </Card>
         </>
       )}
-      
+
       {segments.length === 0 && !isProcessing && (
-        <Card className="p-12 text-center">
+        <Card className="p-16 glass-panel text-center animate-in zoom-in duration-1000">
           <WaveformSlash size={48} className="mx-auto text-muted-foreground mb-4" />
           <h3 className="font-semibold mb-2">No Analysis Yet</h3>
           <p className="text-muted-foreground text-sm">
@@ -744,7 +748,7 @@ export function Transcribe({ onNavigate }: TranscribeProps) {
 
       {/* ── Recent Transcriptions ────────────────────────────── */}
       {recentTranscriptions.length > 0 && (
-        <Card className="p-6">
+        <Card className="p-8 glass-panel animate-in fade-in duration-1000 delay-700">
           <div className="space-y-3">
             <h3 className="font-semibold font-display">Recent Transcriptions</h3>
             <ul className="space-y-2">

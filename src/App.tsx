@@ -148,6 +148,43 @@ function App() {
     }
   }
 
+  const [isBooting, setIsBooting] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsBooting(false), 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isBooting) {
+    return (
+      <div className="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center space-y-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative w-32 h-32"
+        >
+          {/* Neural Pick Glow */}
+          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+          <svg viewBox="0 0 100 100" className="w-full h-full text-primary fill-none stroke-[2]">
+            <path d="M50 10 L85 35 L85 65 L50 90 L15 65 L15 35 Z" className="stroke-primary/50" />
+            <path d="M50 20 L75 40 L75 60 L50 80 L25 60 L25 40 Z" className="stroke-primary animate-pulse" />
+            <path d="M30 50 Q 50 20, 70 50 T 110 50" className="stroke-secondary stroke-[1] opacity-50" />
+          </svg>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="text-center space-y-2"
+        >
+          <h1 className="text-2xl font-bold tracking-[0.3em] font-display text-gradient">STRUM AI</h1>
+          <p className="text-xs text-muted-foreground font-mono tracking-widest uppercase">Initializing Neural Core...</p>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 pb-20 md:pb-6">
@@ -168,7 +205,7 @@ function App() {
 
       <nav className="hidden md:block fixed top-0 left-0 right-0 bg-card border-b border-border z-10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
-          <h1 className="text-xl font-bold text-primary">Jacobs Music</h1>
+          <h1 className="text-xl font-bold text-primary tracking-tighter">STRUM AI</h1>
           <div className="flex gap-1">
             {navItems.map(item => {
               const Icon = item.icon
@@ -179,8 +216,8 @@ function App() {
                   onClick={() => navigateTo(item.id)}
                   className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
-                    isActive 
-                      ? "bg-primary/10 text-primary" 
+                    isActive
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-secondary"
                   )}
                 >
