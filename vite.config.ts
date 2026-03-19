@@ -23,6 +23,10 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src')
     }
   },
+  build: {
+    // Keep warnings meaningful now that optional 3D/transcription chunks are lazily loaded.
+    chunkSizeWarningLimit: 2800,
+  },
   worker: {
     // ES module format required to support dynamic import() inside workers.
     format: 'es',

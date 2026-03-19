@@ -1,27 +1,28 @@
-import { useState, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useKV } from '@github/spark/hooks'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
-import { Dashboard } from '@/pages/Dashboard'
-import { MySongs } from '@/pages/MySongs'
-import { Library } from '@/pages/Library'
-import { Discover } from '@/pages/Discover'
-import { ChordsNew } from '@/pages/ChordsNew'
-import { Tools } from '@/pages/Tools'
-import { SongEditorV2 as SongEditor } from '@/pages/SongEditorV2'
-import { AudioIdeas } from '@/pages/AudioIdeas'
-import { Transcribe } from '@/pages/Transcribe'
-import { TranscribeTimeline } from '@/pages/TranscribeTimeline'
-import { PlayMode } from '@/components/PlayMode'
-import { Progress } from '@/pages/Progress'
-import { Settings } from '@/pages/Settings'
-import { StyleGuide } from '@/pages/StyleGuide'
 import { BottomNav, navItems } from '@/components/nav/BottomNav'
 import { DesktopSidebar } from '@/components/nav/DesktopSidebar'
 import { useSettings } from '@/hooks/useSettings'
 import { registerKeyboardShortcuts, registerShortcut } from '@/lib/keyboardShortcuts'
 import type { Song, Setlist } from '@/types'
+
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })))
+const MySongs = lazy(() => import('@/pages/MySongs').then(m => ({ default: m.MySongs })))
+const Library = lazy(() => import('@/pages/Library').then(m => ({ default: m.Library })))
+const Discover = lazy(() => import('@/pages/Discover').then(m => ({ default: m.Discover })))
+const ChordsNew = lazy(() => import('@/pages/ChordsNew').then(m => ({ default: m.ChordsNew })))
+const Tools = lazy(() => import('@/pages/Tools').then(m => ({ default: m.Tools })))
+const SongEditor = lazy(() => import('@/pages/SongEditorV2').then(m => ({ default: m.SongEditorV2 })))
+const AudioIdeas = lazy(() => import('@/pages/AudioIdeas').then(m => ({ default: m.AudioIdeas })))
+const Transcribe = lazy(() => import('@/pages/Transcribe').then(m => ({ default: m.Transcribe })))
+const TranscribeTimeline = lazy(() => import('@/pages/TranscribeTimeline').then(m => ({ default: m.TranscribeTimeline })))
+const PlayMode = lazy(() => import('@/components/PlayMode').then(m => ({ default: m.PlayMode })))
+const Progress = lazy(() => import('@/pages/Progress').then(m => ({ default: m.Progress })))
+const Settings = lazy(() => import('@/pages/Settings').then(m => ({ default: m.Settings })))
+const StyleGuide = lazy(() => import('@/pages/StyleGuide').then(m => ({ default: m.StyleGuide })))
 
 type Page = 'dashboard' | 'songs' | 'library' | 'discover' | 'chords' | 'tools' | 'audio' | 'editor' | 'transcribe' | 'transcribe-timeline' | 'play' | 'progress' | 'settings' | 'style-guide'
 
@@ -258,7 +259,9 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {renderPage()}
+              <Suspense fallback={<div className="px-6 py-8 text-sm text-muted-foreground">Loading…</div>}>
+                {renderPage()}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </main>

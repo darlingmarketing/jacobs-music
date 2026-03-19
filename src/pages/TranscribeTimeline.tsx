@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
-import type { Song } from '@/types'
+import type { AudioRecording, Song } from '@/types'
 import type { TranscriptionResult, ChordSegment } from '@/lib/transcribe/types'
 import { getTranscription, saveTranscription } from '@/lib/transcribe/repo'
 import { ChordTimelineEditor } from '@/components/ChordTimelineEditor'
@@ -23,6 +23,7 @@ interface TranscribeTimelineProps {
 
 export function TranscribeTimeline({ transcriptionId, onNavigate }: TranscribeTimelineProps) {
   const [songs, setSongs] = useKV<Song[]>('songs', [])
+  const [recordings] = useKV<AudioRecording[]>('audio-recordings', [])
   const [tx, setTx] = useState<TranscriptionResult | null>(null)
   const [segments, setSegments] = useState<ChordSegment[]>([])
   const [audioDurationMs, setAudioDurationMs] = useState(0)
@@ -43,6 +44,30 @@ export function TranscribeTimeline({ transcriptionId, onNavigate }: TranscribeTi
       setAudioDurationMs(lastMs || 60000)
     })
   }, [transcriptionId])
+
+  // Resolve audio URL from linked recording (if present)
+  useEffect(() => {
+    // cleanup previous object URL
+    return () => {
+      if (audioUrlRef.current?.startsWith('blob:')) {
+        URL.revokeObjectURL(audioUrlRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!tx?.sourceRecordingId) return
+    const rec = (recordings ?? []).find(r => r.id === tx.sourceRecordingId)
+    if (!rec) return
+
+    if (audioUrlRef.current?.startsWith('blob:')) {
+      URL.revokeObjectURL(audioUrlRef.current)
+    }
+
+    audioUrlRef.current = rec.blobData
+      ? URL.createObjectURL(rec.blobData)
+      : rec.storageRef
+  }, [tx?.sourceRecordingId, recordings])
 
   const handleSave = async () => {
     if (!tx) return

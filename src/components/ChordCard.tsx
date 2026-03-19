@@ -1,6 +1,6 @@
+import { lazy, Suspense } from 'react'
 import { Chord, ChordVoicing } from '@/types'
 import { FretboardDiagram } from '@/components/FretboardDiagramNew'
-import { Fretboard3D } from '@/components/fretboard/Fretboard3D'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -8,6 +8,8 @@ import { SpeakerHigh } from '@phosphor-icons/react'
 import { audioEngine } from '@/lib/audioSynthesis'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { chordVoicingDifficulty } from '@/lib/music/chordDifficulty'
+
+const Fretboard3D = lazy(() => import('@/components/fretboard/Fretboard3D').then(m => ({ default: m.Fretboard3D })))
 
 interface ChordCardProps {
   chord: Chord
@@ -51,7 +53,9 @@ export function ChordCard({ chord, leftHanded = false, use3D = false, difficulty
             return (
               <div key={voicing.id} className="flex flex-col items-center gap-2 flex-shrink-0">
                 {use3D ? (
-                  <Fretboard3D voicing={voicing} leftHanded={leftHanded} />
+                  <Suspense fallback={<div className="h-[220px] w-[200px] rounded-md bg-muted/30 animate-pulse" />}>
+                    <Fretboard3D voicing={voicing} leftHanded={leftHanded} />
+                  </Suspense>
                 ) : (
                   <FretboardDiagram voicing={voicing} leftHanded={leftHanded} />
                 )}
