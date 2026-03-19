@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -5,15 +6,18 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Star, Queue, WifiHigh, MusicNotes, Guitar } from '@phosphor-icons/react'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Star, Queue, WifiHigh, MusicNotes, Guitar, Compass, BookOpen } from '@phosphor-icons/react'
 import { AppState } from '@/App'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useSetlists } from '@/hooks/useSetlists'
 import { SetlistManager } from '@/components/SetlistManager'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { SongLearnView } from '@/components/SongLearnView'
 import { isOfflineSupported } from '@/lib/offline'
-import type { Song } from '@/types'
+import type { Song, ExternalSong } from '@/types'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface LibraryProps {
   onNavigate: (page: AppState['currentPage'], songId?: string) => void
@@ -23,10 +27,13 @@ interface LibraryProps {
 export function Library({ onNavigate, onLaunchSetlist }: LibraryProps) {
   const [songs] = useKV<Song[]>('songs', [])
   const [offlineSongs, setOfflineSongs] = useKV<string[]>('offline-songs', [])
+  const [externalSongs] = useKV<ExternalSong[]>('external-songs', [])
   const { favorites, removeFavorite } = useFavorites()
   const { setlists } = useSetlists()
+  const [learningSong, setLearningSong] = useState<ExternalSong | null>(null)
   const allSongs = songs ?? []
   const allOfflineSongs = offlineSongs ?? []
+  const allExternal = externalSongs ?? []
 
   const favoriteSongs = favorites
     .filter(f => f.type === 'song')
@@ -51,15 +58,25 @@ export function Library({ onNavigate, onLaunchSetlist }: LibraryProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Library</h1>
+      <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
+        <BookOpen size={32} className="text-primary" weight="duotone" />
+        Library
+      </h1>
 
       <Tabs defaultValue="favorites" className="w-full">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="favorites" className="gap-2">
             <Star size={16} />
             Favorites
             {favorites.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">{favorites.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="discovered" className="gap-2">
+            <Compass size={16} />
+            Discovered
+            {allExternal.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">{allExternal.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="setlists" className="gap-2">
@@ -147,6 +164,60 @@ export function Library({ onNavigate, onLaunchSetlist }: LibraryProps) {
           )}
         </TabsContent>
 
+        {/* Discovered songs tab */}
+        <TabsContent value="discovered" className="space-y-4 mt-4">
+          {allExternal.length === 0 ? (
+            <Card className="p-12 text-center border-dashed">
+              <Compass size={40} className="mx-auto text-muted-foreground/30 mb-3" weight="duotone" />
+              <p className="font-medium text-muted-foreground">No discovered songs yet</p>
+              <p className="text-sm text-muted-foreground/70 mt-1 mb-4">
+                Find songs, tabs, and lyrics on the Discover page and save them here.
+              </p>
+              <Button variant="outline" onClick={() => onNavigate('discover')} className="gap-2">
+                <Compass size={16} />
+                Go to Discover
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {allExternal.map(song => (
+                <Card
+                  key={song.id}
+                  className="p-4 cursor-pointer hover:border-primary/40 transition-all group"
+                  onClick={() => setLearningSong(song)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center text-base font-bold text-primary shrink-0">
+                      {song.title.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate group-hover:text-primary transition-colors">{song.title}</h3>
+                      {song.artist && <p className="text-sm text-muted-foreground">{song.artist}</p>}
+                      <div className="flex gap-1.5 mt-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">{song.provider}</Badge>
+                        {song.chords && song.chords.length > 0 && (
+                          <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                            <Guitar size={10} className="mr-1" />
+                            Tabs
+                          </Badge>
+                        )}
+                        {song.lyrics && (
+                          <Badge variant="outline" className="text-xs border-accent/30 text-accent">
+                            Lyrics
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      Learn →
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
         {/* Setlists tab */}
         <TabsContent value="setlists" className="mt-4">
           <SetlistManager
@@ -220,6 +291,18 @@ export function Library({ onNavigate, onLaunchSetlist }: LibraryProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Song Learn Dialog */}
+      <Dialog open={learningSong !== null} onOpenChange={open => { if (!open) setLearningSong(null) }}>
+        <DialogContent className="max-w-3xl h-[85vh] p-0 flex flex-col overflow-hidden">
+          {learningSong && (
+            <SongLearnView
+              song={learningSong}
+              onClose={() => setLearningSong(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

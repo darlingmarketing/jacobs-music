@@ -220,3 +220,71 @@
 html {
   font-size: var(--font-size-base, 16px);
 }
+
+/* ── Custom scrollbars ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0.05 250 / 0.6);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.08 250 / 0.8);
+}
+
+/* ── Smooth transitions for interactive elements ─────────────────── */
+button, a, [role="button"] {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* ── Card hover glow ─────────────────────────────────────────────── */
+.card-hover-glow:hover {
+  box-shadow: 0 0 0 1px var(--primary), 0 4px 24px oklch(0.55 0.18 250 / 0.15);
+}
+
+/* ── Gradient border ─────────────────────────────────────────────── */
+.gradient-border {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  z-index: -1;
+  opacity: 0.4;
+}
+
+/* ── Focus visible improvements ──────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection color ─────────────────────────────────────────────── */
+::selection {
+  background: oklch(0.55 0.18 250 / 0.3);
+}
+
+/* ── Tab content animations ──────────────────────────────────────── */
+[data-state="active"][role="tabpanel"] {
+  animation: tabFadeIn 0.2s ease;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Sidebar transition fix ──────────────────────────────────────── */
+.sidebar-transition {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
